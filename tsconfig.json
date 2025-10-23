@@ -1,0 +1,27 @@
+{
+	"files": [],
+	"references": [
+		{
+			"path": "./tsconfig.app.json"
+		},
+		{
+			"path": "./tsconfig.node.json"
+		}
+	],
+	"compilerOptions": {
+		"incremental": true,
+		"baseUrl": ".",
+		"paths": {
+			"@/*": [
+				"./src/*"
+			],
+            "@shared/*": [
+                "./shared/*"
+            ],
+						"@abis/*": [
+							"./src/abis/*"
+						]
+		},
+        "skipLibCheck": true
+	}
+}
