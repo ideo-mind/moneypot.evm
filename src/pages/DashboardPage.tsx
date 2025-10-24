@@ -11,7 +11,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router";
 import { PartyPopper, ShieldClose, Trophy, Package, Target, XCircle } from "lucide-react";
-import { toast } from "sonner";
+import { useBlockscoutTx } from "@/hooks/use-blockscout-tx";
+import { BlockscoutBalance } from "@/components/BlockscoutBalance";
 
 const StatCard = ({ title, value, icon: Icon }: { title: string, value: string | number, icon: React.ElementType }) => (
   <Card>
@@ -26,6 +27,7 @@ const StatCard = ({ title, value, icon: Icon }: { title: string, value: string |
 );
 export function DashboardPage() {
   const { account, connected, signAndSubmitTransaction } = useWallet();
+  const { showCustomToast, showSuccessToast, showErrorToast } = useBlockscoutTx();
   const allPots = usePotStore((state) => state.sortedPots);
   const attempts = usePotStore((state) => state.attempts);
   const loading = usePotStore((state) => state.loading);
@@ -44,13 +46,13 @@ export function DashboardPage() {
 
   const handleExpireAllPots = async () => {
     if (!connected || !account) {
-      toast.error("Please connect your wallet first");
+      showErrorToast("Wallet Required", "Please connect your wallet first");
       return;
     }
 
     const activePots = myCreatedPots.filter(pot => pot.is_active && !pot.isExpired);
     if (activePots.length === 0) {
-      toast.info("No active pots to expire");
+      showCustomToast("No Active Pots", "No active pots to expire", "info");
       return;
     }
 
@@ -89,14 +91,14 @@ export function DashboardPage() {
       await expireAllPots(potIds);
 
       if (successCount > 0) {
-        toast.success(`Successfully expired ${successCount} pot${successCount > 1 ? 's' : ''}!`);
+        showSuccessToast(`Successfully expired ${successCount} pot${successCount > 1 ? 's' : ''}!`, "", {});
       }
       if (failedCount > 0) {
-        toast.error(`Failed to expire ${failedCount} pot${failedCount > 1 ? 's' : ''}`);
+        showErrorToast(`Failed to expire ${failedCount} pot${failedCount > 1 ? 's' : ''}`, "", {});
       }
     } catch (error) {
       console.error('Failed to expire all pots:', error);
-      toast.error("Failed to expire pots");
+      showErrorToast("Failed to expire pots", "", {});
     } finally {
       setIsExpiringAll(false);
     }
@@ -134,6 +136,27 @@ export function DashboardPage() {
         <StatCard title="Total Attempts" value={stats.totalAttempts} icon={Target} />
         <StatCard title="Win Rate" value={stats.winRate} icon={Trophy} />
       </div>
+      
+      {/* Wallet Balance Display */}
+      {account && (
+        <div className="mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="w-5 h-5" />
+                Wallet Balance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <BlockscoutBalance 
+                address={account.address.toString()} 
+                showTokenInfo={true}
+                className="text-sm"
+              />
+            </CardContent>
+          </Card>
+        </div>
+      )}
       <Tabs defaultValue="created" className="w-full">
         <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
           <TabsTrigger value="created">My Created Pots</TabsTrigger>

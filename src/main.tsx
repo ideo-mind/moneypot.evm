@@ -18,6 +18,8 @@ import { PotChallengePage } from "./pages/PotChallengePage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
 import { FaucetPage } from "./pages/FaucetPage";
+import { NotificationProvider } from '@blockscout/app-sdk';
+import { blockscoutConfig } from './lib/blockscout-config';
 const router = createBrowserRouter([
   {
     path: "/",
@@ -46,7 +48,15 @@ createRoot(rootElement!).render(
   <StrictMode>
     <ErrorBoundary>
       <WalletProvider>
-        <RouterProvider router={router} />
+        <NotificationProvider
+          config={{
+            chains: blockscoutConfig.supportedChains,
+            primaryChainId: blockscoutConfig.primaryChain.id,
+            notifications: blockscoutConfig.notifications,
+          }}
+        >
+          <RouterProvider router={router} />
+        </NotificationProvider>
       </WalletProvider>
     </ErrorBoundary>
   </StrictMode>,

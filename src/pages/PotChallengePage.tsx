@@ -7,7 +7,9 @@ import { useNetworkAdapter } from "@/lib/network-adapter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Loader2, PartyPopper, ShieldClose, SkipForward, CheckCircle2, XCircle, KeyRound, Zap, Target } from "lucide-react";
-import { Toaster, toast } from "sonner";
+import { Toaster } from "sonner";
+import { useBlockscoutTx } from "@/hooks/use-blockscout-tx";
+import { BlockscoutBalance } from "@/components/BlockscoutBalance";
 
 
 
@@ -30,6 +32,7 @@ export function PotChallengePage() {
   const navigate = useNavigate();
   const { connected, signAndSubmitTransaction, account, network } = useWallet();
   const { walletState } = useWallet();
+  const { showCustomToast, showSuccessToast, showErrorToast, showPendingToast } = useBlockscoutTx();
   const { adapter } = useNetworkAdapter();
   
   // Old Aptos store - no longer used
@@ -123,9 +126,7 @@ export function PotChallengePage() {
     
     // Add visual feedback
     const directionNames = { U: 'Up', D: 'Down', L: 'Left', R: 'Right', S: 'Skip' };
-    toast.success(`Selected: ${directionNames[direction as keyof typeof directionNames]}`, {
-      duration: 1000,
-    });
+    showSuccessToast("Direction Selected", `Selected: ${directionNames[direction as keyof typeof directionNames]}`, {});
     
     // Auto-submit after brief animation
     setTimeout(() => {
@@ -215,14 +216,14 @@ export function PotChallengePage() {
   };
   const handleAttempt = async () => {
     if (!walletState?.type || !walletState?.address) {
-      toast.error("Please connect your wallet first.");
+      showErrorToast("Wallet Required", "Please connect your wallet first.");
       return;
     }
     
     // Validate network based on wallet type
     if (walletState.type === 'aptos') {
       if (!connected || !account) {
-        toast.error("Please connect your wallet first.");
+        showErrorToast("Wallet Required", "Please connect your wallet first.");
         return;
       }
       
@@ -230,20 +231,20 @@ export function PotChallengePage() {
     }
     
     if (!pot) {
-      toast.error("Pot not found.");
+      showErrorToast("Pot Not Found", "The requested pot could not be found.");
       return;
     }
     
     // Prevent attempts on expired pots
     if (pot.isExpired) {
-      toast.error("This pot has expired and cannot be attempted");
+      showErrorToast("Pot Expired", "This pot has expired and cannot be attempted");
       return;
     }
     
     // 1FA private key is now optional - allow attempts without it
     // if (keyState !== 'valid') return;
     setGameState("paying");
-    const toastId = toast.loading(`Submitting entry fee transaction on ${currentData.networkName}...`);
+    showPendingToast("Submitting Entry Fee", `Submitting entry fee transaction on ${currentData.networkName}...`, "");
     
     // Add transaction to log
     const txId = addTransaction({
@@ -268,7 +269,7 @@ export function PotChallengePage() {
         error: error instanceof Error ? error.message : 'Unknown error'
       });
       
-      toast.error("Failed to pay entry fee.", { id: toastId, description: (error as Error).message });
+      showErrorToast("Entry Fee Failed", error instanceof Error ? error.message : 'Unknown error', { txHash: "" });
       setGameState("idle");
     }
   };
@@ -291,7 +292,7 @@ export function PotChallengePage() {
     // Store attempt_id for later use in verification
     setAttemptId(attemptId);
     
-    toast.success("Entry fee paid! Starting 1P authentication...", { id: toastId });
+    showSuccessToast("Entry Fee Paid!", "Starting 1P authentication...", {});
     setGameState("fetching_challenge");
     
     // Step 2: Get 1P authentication challenges from EVM verifier service
@@ -341,10 +342,7 @@ export function PotChallengePage() {
       setGameState("playing");
     } catch (authError) {
       console.error("Failed to get 1P challenges:", authError);
-      toast.error("Failed to get 1P challenges from EVM verifier service", { 
-        id: toastId, 
-        description: authError instanceof Error ? authError.message : 'Unknown error'
-      });
+      showErrorToast("1P Challenges Failed", authError instanceof Error ? authError.message : 'Unknown error', { txHash: "" });
       setGameState("idle");
       return;
     }
@@ -557,15 +555,15 @@ export function PotChallengePage() {
         currentData.addAttempt({ potId: pot!.id, potTitle: pot!.title, status: success ? 'won' : 'lost', date: new Date().toISOString() });
         
         if (success) {
-          toast.success("🎉 Congratulations! You've solved the 1P challenge!", { id: toastId });
+          showSuccessToast("🎉 Congratulations!", "You've solved the 1P challenge!", {});
           setGameState("won");
         } else {
-          toast.error("❌ 1P authentication failed. Better luck next time!", { id: toastId });
+          showErrorToast("❌ Authentication Failed", "1P authentication failed. Better luck next time!", {});
           setGameState("lost");
         }
       } catch (error) {
         console.error("1P verification failed:", error);
-        toast.error("1P verification failed.", { id: toastId, description: (error as Error).message });
+        showErrorToast("1P Verification Failed", (error as Error).message, {});
         setGameState("lost");
       }
     }
