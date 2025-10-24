@@ -1,10 +1,18 @@
-import React from 'react';
-import { useTokenBalances } from '@blockscout/app-sdk';
+import React, { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Coins, Wallet } from 'lucide-react';
-import { getTokenConfig } from '@/lib/blockscout-config';
+import { getCurrentChainConfig } from '@/lib/blockscout-config';
+
+interface TokenBalance {
+  address: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  balance: string;
+  isNative: boolean;
+}
 
 interface BlockscoutBalanceProps {
   address: string;
@@ -19,7 +27,65 @@ export const BlockscoutBalance: React.FC<BlockscoutBalanceProps> = ({
   showTokenInfo = true,
   className = '',
 }) => {
-  const { data: tokenBalances, isLoading, error } = useTokenBalances(address, chainId);
+  const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const currentChain = getCurrentChainConfig();
+
+  useEffect(() => {
+    const fetchBalances = async () => {
+      if (!address) return;
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const apiUrl = currentChain.apiUrl;
+        const balances: TokenBalance[] = [];
+        
+        // Fetch native token balance
+        const nativeBalanceResponse = await fetch(`${apiUrl}/addresses/${address}`);
+        if (nativeBalanceResponse.ok) {
+          const nativeData = await nativeBalanceResponse.json();
+          balances.push({
+            address: '0x0000000000000000000000000000000000000000',
+            symbol: currentChain.nativeCurrency.symbol,
+            name: currentChain.nativeCurrency.name,
+            decimals: currentChain.nativeCurrency.decimals,
+            balance: nativeData.coin_balance || '0',
+            isNative: true,
+          });
+        }
+        
+        // Fetch token balances
+        const tokenBalancesResponse = await fetch(`${apiUrl}/addresses/${address}/token-balances`);
+        if (tokenBalancesResponse.ok) {
+          const tokenData = await tokenBalancesResponse.json();
+          if (tokenData.items) {
+            tokenData.items.forEach((token: any) => {
+              balances.push({
+                address: token.token.address,
+                symbol: token.token.symbol,
+                name: token.token.name,
+                decimals: token.token.decimals,
+                balance: token.value,
+                isNative: false,
+              });
+            });
+          }
+        }
+        
+        setTokenBalances(balances);
+      } catch (err) {
+        console.error('Failed to fetch balances:', err);
+        setError('Failed to load balance');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBalances();
+  }, [address, currentChain]);
 
   if (isLoading) {
     return (
@@ -47,7 +113,7 @@ export const BlockscoutBalance: React.FC<BlockscoutBalanceProps> = ({
   }
 
   const usdcToken = tokenBalances.find(token => 
-    token.symbol === 'USDC' || token.address.toLowerCase() === getTokenConfig('USDC')?.address.toLowerCase()
+    token.symbol === 'USDC' || token.address.toLowerCase() === '0xEC020aA4De9567Ae9dF9f43Da71414aE4932F6f3'.toLowerCase()
   );
 
   const nativeToken = tokenBalances.find(token => 
@@ -113,10 +179,39 @@ export const BlockscoutTokenInfo: React.FC<BlockscoutTokenInfoProps> = ({
   address,
   className = '',
 }) => {
-  const { data: tokenInfo, isLoading, error } = useTokenBalances(
-    address || '0x0000000000000000000000000000000000000000',
-    chainId
-  );
+  const [tokenInfo, setTokenInfo] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const currentChain = getCurrentChainConfig();
+
+  useEffect(() => {
+    const fetchTokenInfo = async () => {
+      if (!tokenAddress) return;
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const apiUrl = currentChain.apiUrl;
+        
+        // Fetch token information
+        const tokenResponse = await fetch(`${apiUrl}/tokens/${tokenAddress}`);
+        if (tokenResponse.ok) {
+          const tokenData = await tokenResponse.json();
+          setTokenInfo(tokenData);
+        } else {
+          setError('Token not found');
+        }
+      } catch (err) {
+        console.error('Failed to fetch token info:', err);
+        setError('Failed to load token info');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTokenInfo();
+  }, [tokenAddress, currentChain]);
 
   if (isLoading) {
     return (
@@ -144,11 +239,7 @@ export const BlockscoutTokenInfo: React.FC<BlockscoutTokenInfoProps> = ({
     );
   }
 
-  const token = tokenInfo?.find(t => 
-    t.address.toLowerCase() === tokenAddress.toLowerCase()
-  );
-
-  if (!token) {
+  if (!tokenInfo) {
     return (
       <Card className={className}>
         <CardContent className="p-4">
@@ -167,20 +258,20 @@ export const BlockscoutTokenInfo: React.FC<BlockscoutTokenInfoProps> = ({
           <div className="flex items-center gap-2">
             <Coins className="w-4 h-4 text-blue-500" />
             <span className="font-medium text-gray-900 dark:text-gray-100">
-              {token.name}
+              {tokenInfo.name}
             </span>
             <Badge variant="outline" className="text-xs">
-              {token.symbol}
+              {tokenInfo.symbol}
             </Badge>
           </div>
           
           <div className="text-sm text-gray-600 dark:text-gray-400">
-            Decimals: {token.decimals}
+            Decimals: {tokenInfo.decimals}
           </div>
           
           {showBalance && address && (
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              Balance: {parseFloat(token.balance).toFixed(6)}
+              Balance: {parseFloat(tokenInfo.balance || '0').toFixed(6)}
             </div>
           )}
         </div>
