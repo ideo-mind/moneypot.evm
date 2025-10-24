@@ -9,7 +9,7 @@ import { Badge } from "./ui/badge";
 import { cn } from "@/lib/utils";
 import { useEVMPotStore } from "@/store/evm-pot-store";
 import { useState } from "react";
-import { toast } from "sonner";
+import { useBlockscoutTx } from "@/hooks/use-blockscout-tx";
 import { evmContractService } from "@/lib/evm-api";
 
 interface PotCardProps {
@@ -19,6 +19,7 @@ interface PotCardProps {
 export function PotCard({ pot }: PotCardProps) {
   const isHot = parseInt(pot.attempts_count) > 10;
   const expirePot = useEVMPotStore((state) => state.expirePot);
+  const { showSuccessToast, showErrorToast } = useBlockscoutTx();
   const [isExpiring, setIsExpiring] = useState(false);
   
   const handleExpirePot = async () => {
@@ -30,13 +31,13 @@ export function PotCard({ pot }: PotCardProps) {
       // Update local state
       const success = await expirePot(pot.id);
       if (success) {
-        toast.success("Pot expired successfully!");
+        showSuccessToast("Pot Expired Successfully!", "", {});
       } else {
-        toast.error("Failed to expire pot");
+        showErrorToast("Failed to Expire Pot", "The pot could not be expired", {});
       }
     } catch (error) {
       console.error('Failed to expire pot:', error);
-      toast.error("Failed to expire pot");
+      showErrorToast("Failed to Expire Pot", error instanceof Error ? error.message : "Unknown error", {});
     } finally {
       setIsExpiring(false);
     }

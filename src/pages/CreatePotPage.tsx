@@ -10,7 +10,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Wand2, Loader2, Terminal, Eye, EyeOff, Shuffle, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { Toaster, toast } from "sonner";
+import { Toaster } from "sonner";
+import { useBlockscoutTx } from "@/hooks/use-blockscout-tx";
+import { BlockscoutBalance } from "@/components/BlockscoutBalance";
 
 
 
@@ -44,6 +46,7 @@ export function CreatePotPage() {
   
   const { walletState } = useWallet();
   const { adapter } = useNetworkAdapter();
+  const { showCustomToast, showSuccessToast, showErrorToast, showPendingToast } = useBlockscoutTx();
   // Removed Aptos store references
   const addEVMPot = useEVMPotStore((state) => state.addPot);
   // Removed Aptos store references
@@ -75,9 +78,7 @@ export function CreatePotPage() {
     const allCharacters = Object.values(CHARACTER_DOMAINS).flat();
     const randomChar = allCharacters[Math.floor(Math.random() * allCharacters.length)];
     setPassword(randomChar);
-    toast.info("Random 1P character chosen by default", {
-      description: "You can change it in Step 3.",
-    });
+    showCustomToast("Random 1P character chosen by default", "You can change it in Step 3.", "info");
   }, []);
 
   // Fetch dynamic colors and directions from backend
@@ -191,9 +192,7 @@ export function CreatePotPage() {
     setOneFaAddress(randomAddress);
     const randomPrivateKey = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
     setOneFaPrivateKey(randomPrivateKey);
-    toast.success("1FA Key Generated!", {
-      description: "Save the private key securely. It is NOT recoverable.",
-    });
+    showSuccessToast("1FA Key Generated!", "Save the private key securely. It is NOT recoverable.");
   };
   const handleEntryFeeChange = (value: number) => {
     setEntryFee(value);
@@ -211,18 +210,18 @@ export function CreatePotPage() {
       }
     });
     setColorMap(newColorMap);
-    toast.info("Color mapping has been randomized!");
+    showCustomToast("Color mapping has been randomized!", "", "info");
   };
   const handleCreatePot = async () => {
     if (!walletState?.type || !walletState?.address) {
-      toast.error("Please connect your wallet first.");
+      showErrorToast("Wallet Required", "Please connect your wallet first.");
       return;
     }
     
     // Removed Aptos validation
     
     if (!password || Object.keys(colorMap).length < mappableDirections.length) {
-      toast.error("Please complete all fields in the previous steps.");
+      showErrorToast("Incomplete Form", "Please complete all fields in the previous steps.");
       return;
     }
     
@@ -234,7 +233,7 @@ export function CreatePotPage() {
     }
     
     setIsSubmitting(true);
-    const toastId = toast.loading(`Submitting transaction to Creditcoin...`);
+    showPendingToast("Creating Money Pot", `Submitting transaction to Creditcoin...`, "");
     
     // Add transaction to log
     const txId = addTransaction({
@@ -247,7 +246,7 @@ export function CreatePotPage() {
     
     try {
       if (walletState.type === 'evm') {
-        await handleEVMCreatePot(finalOneFaAddress, toastId, txId);
+        await handleEVMCreatePot(finalOneFaAddress, txId);
       }
       // else {
       //   // Removed Aptos code
@@ -260,15 +259,15 @@ export function CreatePotPage() {
         status: 'failed', 
         error: error instanceof Error ? error.message : 'Unknown error'
       });
-      toast.error("Pot creation failed.", { id: toastId, description: (error as Error).message });
+      showErrorToast("Pot Creation Failed", error instanceof Error ? error.message : 'Unknown error', { txHash: "" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleEVMCreatePot = async (finalOneFaAddress: string, toastId: string, txId: string) => {
+  const handleEVMCreatePot = async (finalOneFaAddress: string, txId: string) => {
     // Create pot using network adapter
-    const result = await adapter.createPot({
+    const result = await adapter.client.createPot({
       amount,
       duration: getDurationInSeconds(),
       fee: entryFee,
@@ -285,7 +284,7 @@ export function CreatePotPage() {
     // Update transaction with hash (we'll need to get this from the contract service)
     updateTransaction(txId, { hash: potId }); // Using potId as hash for now
     
-    toast.loading("Registering pot with verifier...", { id: toastId });
+    showPendingToast("Registering Pot", "Registering pot with verifier...", "");
     
     // Register with EVM verifier service
     const timestamp = Math.floor(Date.now() / 1000);
@@ -321,7 +320,7 @@ export function CreatePotPage() {
     );
     
     // Fetch the created pot from blockchain
-    const potData = await adapter.getPot(potId);
+    const potData = await adapter.client.getPot(potId);
     if (!potData.success || !potData.data) {
       throw new Error('Failed to fetch created pot');
     }
@@ -339,7 +338,8 @@ export function CreatePotPage() {
       description: `Successfully created Pot #${potId} with ${amount} USDC`
     });
     
-    toast.dismiss(toastId);
+    showSuccessToast("Pot Created Successfully!", `Successfully created Pot #${potId} with ${amount} USDC`, { potId, amount: `${amount} USDC` });
+    
     setCreationSuccess(true);
     setTimeout(() => navigate("/pots"), 3000);
   };
@@ -716,6 +716,18 @@ export function CreatePotPage() {
                             </div>
                           </li>
                           <li className="flex justify-between"><span>1FA Address:</span> <span className="font-mono text-xs">{oneFaAddress ? `${oneFaAddress.slice(0,10)}...` : "Will be auto-generated"}</span></li>
+                          {walletState.isConnected && walletState.address && (
+                            <li className="flex justify-between items-start">
+                              <span>Wallet Balance:</span>
+                              <div className="text-right">
+                                <BlockscoutBalance 
+                                  address={walletState.address} 
+                                  showTokenInfo={false}
+                                  className="text-xs"
+                                />
+                              </div>
+                            </li>
+                          )}
                         </ul>
                         <Button onClick={handleCreatePot} disabled={isSubmitting || !walletState.isConnected || !password || Object.keys(colorMap).length < mappableDirections.length} className="w-full bg-brand-green hover:bg-brand-green/90 text-white font-bold text-lg py-6">
                           {isSubmitting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : `Deposit ${amount} USDC & Create Pot`}

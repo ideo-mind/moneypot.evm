@@ -5,21 +5,23 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Coins, CheckCircle, XCircle } from 'lucide-react';
 import { useWallet } from '@/components/WalletProvider';
 import { evmFaucetService } from '@/lib/evm-faucet';
-import { toast } from 'sonner';
+import { useBlockscoutTx } from '@/hooks/use-blockscout-tx';
+import { BlockscoutBalance } from '@/components/BlockscoutBalance';
 
 export function FaucetPage() {
   const { walletState } = useWallet();
+  const { showCustomToast, showSuccessToast, showErrorToast, showPendingToast } = useBlockscoutTx();
   const [isRequesting, setIsRequesting] = useState(false);
   const [lastResult, setLastResult] = useState<any>(null);
 
   const handleAirdropRequest = async () => {
     if (!walletState?.type) {
-      toast.error('Please connect a wallet first');
+      showErrorToast('Wallet Required', 'Please connect a wallet first');
       return;
     }
 
     if (walletState.type !== 'evm') {
-      toast.error('Airdrop is only available for EVM wallets');
+      showErrorToast('Wallet Type Error', 'Airdrop is only available for EVM wallets');
       return;
     }
 
@@ -35,20 +37,14 @@ export function FaucetPage() {
       setLastResult(result);
 
       if (result.success) {
-        toast.success('Airdrop successful!', {
-          description: `Received ${result.message || '200 CTC + USDC'}`
-        });
+        showSuccessToast('Airdrop Successful!', `Received ${result.message || '200 CTC + USDC'}`, {});
       } else {
-        toast.error('Airdrop failed', {
-          description: result.error || 'Unknown error'
-        });
+        showErrorToast('Airdrop Failed', result.error || 'Unknown error', {});
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setLastResult({ success: false, error: errorMessage });
-      toast.error('Airdrop request failed', {
-        description: errorMessage
-      });
+      showErrorToast('Airdrop Request Failed', errorMessage, {});
     } finally {
       setIsRequesting(false);
     }
@@ -125,9 +121,18 @@ export function FaucetPage() {
             </div>
           ) : (
             <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-              <p className="text-green-800 dark:text-green-200 text-sm">
+              <p className="text-green-800 dark:text-green-200 text-sm mb-3">
                 ✅ EVM wallet connected. Ready to request airdrop.
               </p>
+              {walletState.address && (
+                <div className="mt-2">
+                  <BlockscoutBalance 
+                    address={walletState.address} 
+                    showTokenInfo={true}
+                    className="text-sm"
+                  />
+                </div>
+              )}
             </div>
           )}
 

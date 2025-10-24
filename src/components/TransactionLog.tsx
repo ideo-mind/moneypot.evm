@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronUp, X, ExternalLink, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { useExplorerLinks } from '@/hooks/use-explorer-links';
 
 const getStatusIcon = (status: Transaction['status']) => {
   switch (status) {
@@ -49,6 +50,13 @@ const getTypeLabel = (type: Transaction['type']) => {
 
 const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { openTransaction, formatTxHash } = useExplorerLinks();
+  
+  const handleViewOnExplorer = () => {
+    if (transaction.hash) {
+      openTransaction(transaction.hash);
+    }
+  };
   
   return (
     <div className="flex items-start gap-3 p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -93,7 +101,8 @@ const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }
             variant="ghost"
             size="sm"
             className="h-6 px-2 text-xs"
-            onClick={() => window.open(`https://creditcoin-testnet.blockscout.com/tx/${transaction.hash}`, '_blank')}
+            onClick={handleViewOnExplorer}
+            disabled={!transaction.hash}
           >
             <ExternalLink className="w-3 h-3 mr-1" />
             View on Explorer
@@ -106,7 +115,7 @@ const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }
               <div>
                 <span className="font-medium text-slate-700 dark:text-slate-300">Hash:</span>
                 <code className="ml-2 text-slate-600 dark:text-slate-400 font-mono">
-                  {transaction.hash.slice(0, 8)}...{transaction.hash.slice(-8)}
+                  {transaction.hash ? formatTxHash(transaction.hash) : 'N/A'}
                 </code>
               </div>
               {transaction.amount && (
