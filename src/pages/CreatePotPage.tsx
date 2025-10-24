@@ -267,7 +267,7 @@ export function CreatePotPage() {
 
   const handleEVMCreatePot = async (finalOneFaAddress: string, txId: string) => {
     // Create pot using network adapter
-    const result = await adapter.createPot({
+    const result = await adapter.client.createPot({
       amount,
       duration: getDurationInSeconds(),
       fee: entryFee,
@@ -320,7 +320,7 @@ export function CreatePotPage() {
     );
     
     // Fetch the created pot from blockchain
-    const potData = await adapter.getPot(potId);
+    const potData = await adapter.client.getPot(potId);
     if (!potData.success || !potData.data) {
       throw new Error('Failed to fetch created pot');
     }

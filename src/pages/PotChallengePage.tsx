@@ -276,7 +276,7 @@ export function PotChallengePage() {
 
   const handleEVMAttemptPot = async (toastId: string, txId: string) => {
     // Attempt pot using network adapter
-    const result = await adapter.attemptPot({
+    const result = await adapter.client.attemptPot({
       potId: pot!.id,
     });
 
