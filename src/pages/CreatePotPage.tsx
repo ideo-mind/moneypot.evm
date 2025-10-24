@@ -246,7 +246,7 @@ export function CreatePotPage() {
     
     try {
       if (walletState.type === 'evm') {
-        await handleEVMCreatePot(finalOneFaAddress, toastId, txId);
+        await handleEVMCreatePot(finalOneFaAddress, txId);
       }
       // else {
       //   // Removed Aptos code
@@ -265,7 +265,7 @@ export function CreatePotPage() {
     }
   };
 
-  const handleEVMCreatePot = async (finalOneFaAddress: string, toastId: string, txId: string) => {
+  const handleEVMCreatePot = async (finalOneFaAddress: string, txId: string) => {
     // Create pot using network adapter
     const result = await adapter.createPot({
       amount,

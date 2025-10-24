@@ -1,5 +1,6 @@
 import { useNotification } from "@blockscout/app-sdk"
 import { useCallback } from "react"
+import { toast } from "sonner"
 import {
   blockscoutConfig,
   getCurrentChainConfig,
@@ -19,7 +20,7 @@ export interface TransactionToastOptions {
 }
 
 export const useBlockscoutTx = () => {
-  const { openTxToast, openCustomToast } = useNotification()
+  const { openTxToast } = useNotification() // Only openTxToast exists in SDK
   const currentChain = getCurrentChainConfig()
 
   const showTransactionToast = useCallback(
@@ -58,7 +59,7 @@ export const useBlockscoutTx = () => {
         }
       }
 
-      // Show transaction toast with chain ID
+      // Use Blockscout SDK for transaction toasts
       openTxToast(currentChain.id.toString(), txHash, {
         description: customDescription,
         showExplorerLink,
@@ -67,6 +68,7 @@ export const useBlockscoutTx = () => {
     [openTxToast, currentChain.id]
   )
 
+  // All other toast methods use sonner
   const showCustomToast = useCallback(
     (
       title: string,
@@ -78,18 +80,14 @@ export const useBlockscoutTx = () => {
         txHash?: string
       } = {}
     ) => {
-      const { duration = 5000, showExplorerLink = false, txHash } = options
+      const { duration = 5000 } = options
 
-      openCustomToast({
-        title,
+      toast[status](title, {
         description,
-        status,
         duration,
-        showExplorerLink,
-        txHash,
       })
     },
-    [openCustomToast]
+    []
   )
 
   const showSuccessToast = useCallback(
@@ -98,7 +96,7 @@ export const useBlockscoutTx = () => {
       description: string,
       options: { txHash?: string; potId?: string; amount?: string } = {}
     ) => {
-      const { txHash, potId, amount } = options
+      const { potId, amount } = options
       let enhancedDescription = description
 
       if (potId) {
@@ -108,12 +106,11 @@ export const useBlockscoutTx = () => {
         enhancedDescription += ` (${amount} USDC)`
       }
 
-      showCustomToast(title, enhancedDescription, "success", {
-        txHash,
-        showExplorerLink: !!txHash,
+      toast.success(title, {
+        description: enhancedDescription,
       })
     },
-    [showCustomToast]
+    []
   )
 
   const showErrorToast = useCallback(
@@ -122,32 +119,30 @@ export const useBlockscoutTx = () => {
       description: string,
       options: { txHash?: string; showTroubleshooting?: boolean } = {}
     ) => {
-      const { txHash, showTroubleshooting = true } = options
+      const { showTroubleshooting = true } = options
       let enhancedDescription = description
 
-      if (showTroubleshooting && txHash) {
+      if (showTroubleshooting) {
         enhancedDescription +=
-          " Check the transaction details for more information."
+          " Please try again or check your wallet connection."
       }
 
-      showCustomToast(title, enhancedDescription, "error", {
-        txHash,
-        showExplorerLink: !!txHash,
+      toast.error(title, {
+        description: enhancedDescription,
         duration: 8000, // Longer duration for errors
       })
     },
-    [showCustomToast]
+    []
   )
 
   const showPendingToast = useCallback(
     (title: string, description: string, txHash: string) => {
-      showCustomToast(title, description, "info", {
-        txHash,
-        showExplorerLink: true,
+      toast.loading(title, {
+        description,
         duration: 0, // Don't auto-dismiss pending toasts
       })
     },
-    [showCustomToast]
+    []
   )
 
   return {

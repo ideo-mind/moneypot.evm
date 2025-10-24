@@ -48,13 +48,7 @@ createRoot(rootElement!).render(
   <StrictMode>
     <ErrorBoundary>
       <WalletProvider>
-        <NotificationProvider
-          config={{
-            chains: blockscoutConfig.supportedChains,
-            primaryChainId: blockscoutConfig.primaryChain.id,
-            notifications: blockscoutConfig.notifications,
-          }}
-        >
+        <NotificationProvider>
           <RouterProvider router={router} />
         </NotificationProvider>
       </WalletProvider>
