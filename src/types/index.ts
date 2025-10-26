@@ -20,6 +20,9 @@ export interface Pot {
   creatorUsername: string // Formatted address for display (e.g., "0x1234...5678")
   creatorAddress: string // Full address from contract
   difficulty: number
+  // Blockchain-specific fields
+  network?: string // "evm" or "aptos"
+  chainId?: string // Chain identifier
 }
 
 export interface Attempt {

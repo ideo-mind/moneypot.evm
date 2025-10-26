@@ -2,7 +2,6 @@
 import { PotCard } from "@/components/PotCard";
 import { PotCardSkeleton } from "@/components/PotCardSkeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { usePotStore } from "@/store/pot-store";
 import { useEVMPotStore } from "@/store/evm-pot-store";
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +14,7 @@ import { PartyPopper, ShieldClose, Trophy, Package, Target, XCircle } from "luci
 import { useBlockscoutTx } from "@/hooks/use-blockscout-tx";
 import { BlockscoutBalance } from "@/components/BlockscoutBalance";
 import { useWallet } from "@/components/WalletProvider";
+import { evmContractService } from "@/lib/evm-api";
 
 const StatCard = ({ title, value, icon: Icon }: { title: string, value: string | number, icon: React.ElementType }) => (
   <Card>
@@ -37,14 +37,16 @@ export function DashboardPage() {
   const loading = useEVMPotStore((state) => state.loading);
   const fetchPots = useEVMPotStore((state) => state.fetchPots);
   const evmExpirePot = useEVMPotStore((state) => state.expirePot);
+  const loadAttempts = useEVMPotStore((state) => state.loadAttempts);
   
   const [isExpiringAll, setIsExpiringAll] = useState(false);
   
   useEffect(() => {
     if (walletState?.type === 'evm') {
       fetchPots();
+      loadAttempts();
     }
-  }, [walletState?.type, fetchPots]);
+  }, [walletState?.type, fetchPots, loadAttempts]);
   
   const myCreatedPots = useMemo(() => {
     if (!walletState?.address) return [];
@@ -71,7 +73,13 @@ export function DashboardPage() {
       // Process each pot individually using EVM
       for (const pot of activePots) {
         try {
-          // Use EVM expire pot
+          // Submit blockchain transaction
+          const txHash = await evmContractService.expirePot(pot.id);
+          
+          // Show transaction toast
+          showSuccessToast(`Expiring pot ${pot.id}...`, "", {});
+          
+          // Update local state
           const success = await evmExpirePot(pot.id);
           if (success) {
             successCount++;
@@ -80,6 +88,7 @@ export function DashboardPage() {
           }
         } catch (error) {
           console.error(`Failed to expire pot ${pot.id}:`, error);
+          showErrorToast(`Failed to expire pot ${pot.id}`, error instanceof Error ? error.message : "Unknown error", {});
           failedCount++;
         }
       }
@@ -107,7 +116,7 @@ export function DashboardPage() {
       winRate,
     };
   }, [myCreatedPots, attempts]);
-  if (!connected) {
+  if (!walletState?.isConnected) {
     return (
       <div className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8 text-center">
         <h1 className="text-4xl md:text-5xl font-display font-bold">My Dashboard</h1>
@@ -132,7 +141,7 @@ export function DashboardPage() {
       </div>
       
       {/* Wallet Balance Display */}
-      {account && (
+      {walletState?.address && (
         <div className="mb-8">
           <Card>
             <CardHeader>
@@ -143,7 +152,7 @@ export function DashboardPage() {
             </CardHeader>
             <CardContent>
               <BlockscoutBalance 
-                address={account.address.toString()} 
+                address={walletState.address} 
                 showTokenInfo={true}
                 className="text-sm"
               />

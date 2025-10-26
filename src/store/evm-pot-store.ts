@@ -31,6 +31,7 @@ interface EVMPotState {
   fetchPotById: (id: string) => Promise<void>
   getPotById: (id: string) => Pot | undefined
   addAttempt: (attempt: Attempt) => void
+  loadAttempts: () => void
   addPot: (pot: Pot) => void
   clearCache: () => void
   expirePot: (potId: string) => Promise<boolean>
@@ -96,9 +97,20 @@ export const transformEVMPotToPot = (
     Number(attemptsCount) + 2
   )
 
+  // Format creator address for display
+  const creatorAddress =
+    evmPot.creator || "0x0000000000000000000000000000000000000000"
+  const creatorUsername = `${creatorAddress.slice(
+    0,
+    6
+  )}...${creatorAddress.slice(-4)}`
+
+  // Generate a deterministic avatar based on address
+  const creatorAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${creatorAddress}`
+
   return {
     id: evmPot.id?.toString() || "0",
-    creator: evmPot.creator || "0x0000000000000000000000000000000000000000",
+    creator: creatorAddress,
     total_usdc: totalAmount.toString(),
     entry_fee: fee.toString(),
     created_at: createdAt.toString(),
@@ -115,6 +127,10 @@ export const transformEVMPotToPot = (
     timeLeft,
     isExpired,
     difficulty,
+    // Creator display fields
+    creatorAvatar,
+    creatorUsername,
+    creatorAddress,
     // EVM-specific fields
     network: "evm",
     chainId: "11155111", // Sepolia
@@ -328,6 +344,14 @@ export const useEVMPotStore = create<EVMPotState>((set, get) => ({
     const attempts = attemptsStr ? JSON.parse(attemptsStr) : []
     attempts.push(attempt)
     localStorage.setItem(EVM_ATTEMPTS_STORAGE_KEY, JSON.stringify(attempts))
+  },
+
+  loadAttempts: () => {
+    const attemptsStr = localStorage.getItem(EVM_ATTEMPTS_STORAGE_KEY)
+    if (attemptsStr) {
+      const attempts = JSON.parse(attemptsStr)
+      set({ attempts })
+    }
   },
 
   addPot: (pot: Pot) => {
