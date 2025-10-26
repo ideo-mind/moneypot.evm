@@ -65,6 +65,7 @@ export function PotChallengePage() {
   const [currentRound, setCurrentRound] = useState(0);
   const [solutions, setSolutions] = useState<string[]>([]);
   const [attemptId, setAttemptId] = useState<string>("");
+  const [challengeId, setChallengeId] = useState<string>("");
   const [selectedDirection, setSelectedDirection] = useState<string>("");
   const [showAnimation, setShowAnimation] = useState(false);
   const [dynamicColors, setDynamicColors] = useState<Record<string, string>>({});
@@ -273,6 +274,14 @@ export function PotChallengePage() {
       const authResponse = await evmVerifierService.authenticateOptions(attemptId, signature);
       console.log("Full EVM auth response:", authResponse);
       
+      // Extract challenge_id from response (as per demo.py line 815)
+      const returnedChallengeId = authResponse.challenge_id;
+      if (!returnedChallengeId) {
+        throw new Error('No challenge_id returned from authenticate_options');
+      }
+      console.log("Challenge ID from authenticate/options:", returnedChallengeId);
+      setChallengeId(returnedChallengeId);
+      
       // Store dynamic colors and directions
       setDynamicColors(authResponse.colors || {});
       setDynamicDirections(authResponse.directions || {});
@@ -365,16 +374,26 @@ export function PotChallengePage() {
         
         let verifyResponse;
         try {
+          // Create signature for wallet authentication
+          const evmWallet = getConnectedWallet();
+          if (!evmWallet) {
+            throw new Error('No EVM wallet connected');
+          }
+          
+          if (!challengeId) {
+            throw new Error('No challenge_id available for verification');
+          }
+          
+          // Sign the challenge_id as per demo.py (line 348: "messageToVerify when challenge_id is present")
+          const signature = await EVMVerifierServiceClient.createEVMSignature(evmWallet, challengeId);
+          
           // Use EVM verifier service
-          const solutions = updatedSolutions.map((solution, index) => ({
-            challenge_id: index.toString(),
-            answer: solution
-          }));
+          const solutions = updatedSolutions;
           
           verifyResponse = await evmVerifierService.authenticateVerify(
             solutions,
-            attemptId.toString(),
-            walletState.address!
+            challengeId,
+            signature
           );
           console.log("Response from EVM /authenticate/verify:", verifyResponse);
         } catch (error) {
