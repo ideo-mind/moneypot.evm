@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
-import { usePotStore } from "@/store/pot-store";
 import { useEVMPotStore } from "@/store/evm-pot-store";
 import { useWallet } from "@/components/WalletProvider";
 import { useNetworkAdapter } from "@/lib/network-adapter";
@@ -10,6 +9,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Loader2, PartyPopper, Shield
 import { Toaster } from "sonner";
 import { useBlockscoutTx } from "@/hooks/use-blockscout-tx";
 import { BlockscoutBalance } from "@/components/BlockscoutBalance";
+import { useChainSwitch } from "@/hooks/use-chain-switch";
 
 
 
@@ -32,16 +32,9 @@ export function PotChallengePage() {
   const navigate = useNavigate();
   const { connected, signAndSubmitTransaction, account, network } = useWallet();
   const { walletState } = useWallet();
+  const { currentChain } = useChainSwitch();
   const { showCustomToast, showSuccessToast, showErrorToast, showPendingToast } = useBlockscoutTx();
   const { adapter } = useNetworkAdapter();
-  
-  // Old Aptos store - no longer used
-  
-  
-  
-  
-  
-  
   
   // EVM store
   const evmPot = useEVMPotStore((state) => state.currentPot);
@@ -51,34 +44,17 @@ export function PotChallengePage() {
   const evmAddAttempt = useEVMPotStore((state) => state.addAttempt);
   const evmExpirePot = useEVMPotStore((state) => state.expirePot);
   
-  // Get current network data based on wallet type
-  const getCurrentNetworkData = () => {
-    if (walletState?.type === 'evm') {
-      return {
-        pot: evmPot,
-        loading: evmLoading,
-        error: evmError,
-        fetchPotById: evmFetchPotById,
-        addAttempt: evmAddAttempt,
-        expirePot: evmExpirePot,
-        networkName: 'Creditcoin Testnet',
-        networkType: 'evm'
-      };
-    } else {
-      return {
-        pot: aptosPot,
-        loading: aptosLoading,
-        error: aptosError,
-        fetchPotById: aptosFetchPotById,
-        addAttempt: aptosAddAttempt,
-        expirePot: aptosExpirePot,
-        networkName: 'Aptos Testnet',
-        networkType: 'aptos'
-      };
-    }
+  // Use EVM data directly since we only support EVM now
+  const currentData = {
+    pot: evmPot,
+    loading: evmLoading,
+    error: evmError,
+    fetchPotById: evmFetchPotById,
+    addAttempt: evmAddAttempt,
+    expirePot: evmExpirePot,
+    networkName: currentChain.name,
+    networkType: 'evm'
   };
-  
-  const currentData = getCurrentNetworkData();
   const pot = currentData.pot;
   const { addTransaction, updateTransaction } = useTransactionStore();
   const [gameState, setGameState] = useState<GameState>("idle");
@@ -220,14 +196,10 @@ export function PotChallengePage() {
       return;
     }
     
-    // Validate network based on wallet type
-    if (walletState.type === 'aptos') {
-      if (!connected || !account) {
-        showErrorToast("Wallet Required", "Please connect your wallet first.");
-        return;
-      }
-      
-      // Removed Aptos validation
+    // Validate EVM wallet
+    if (walletState.type !== 'evm') {
+      showErrorToast("Unsupported Wallet", "Please connect an EVM wallet.");
+      return;
     }
     
     if (!pot) {
@@ -257,11 +229,7 @@ export function PotChallengePage() {
     });
     
     try {
-      if (walletState.type === 'evm') {
-        await handleEVMAttemptPot(toastId, txId);
-      } else {
-        // Removed Aptos code
-      }
+      await handleEVMAttemptPot(toastId, txId);
     } catch (error) {
       // Update transaction as failed
       updateTransaction(txId, { 
@@ -354,133 +322,6 @@ export function PotChallengePage() {
     });
   };
 
-  const handleAptosAttemptPot = async (toastId: string, txId: string) => {
-    // Use wallet adapter to sign and submit transaction
-    const response = await signAndSubmitTransaction({
-      sender: account!.address,
-      data: {
-        function: `${MODULE_ADDRESS}::${MODULE_NAME}::attempt_pot_entry`,
-        typeArguments: [],
-        functionArguments: [BigInt(pot!.id).toString()],
-      },
-    });
-    
-    // Update transaction with hash
-    updateTransaction(txId, { hash: response.hash });
-    
-    // Wait for transaction to complete
-    const result = await aptos.waitForTransaction({
-      transactionHash: response.hash,
-    });
-    
-    // Debug: Log all events to understand the structure
-    console.log("Transaction result:", result);
-    console.log("All events:", (result as any).events);
-    
-    let extractedAttemptId: string | undefined;
-    
-    // Extract attempt_id from events using proper PotEvent type
-    const attemptEvent = (result as any).events?.find((e: any) => {
-      console.log("Checking event:", e);
-      // Look for PotEvent with event_type containing "attempted"
-      if (e.type.includes("PotEvent")) {
-        const eventData = e.data as money_pot_manager.PotEvent;
-        console.log("PotEvent data:", eventData);
-        return eventData.event_type.includes("attempted");
-      }
-      return false;
-    });
-    
-    if (attemptEvent) {
-      const eventData = attemptEvent.data as money_pot_manager.PotEvent;
-      extractedAttemptId = eventData.id.toString();
-      console.log("Extracted attempt_id from PotEvent:", extractedAttemptId);
-    } else {
-      // Fallback: try to find any event that might contain attempt information
-      console.log("No PotEvent found, trying fallback...");
-      const fallbackEvent = (result as any).events?.find((e: any) => 
-        e.type.includes("money_pot") || e.type.includes("attempt") || e.type.includes("attempted")
-      );
-      
-      if (fallbackEvent) {
-        console.log("Found fallback event:", fallbackEvent);
-        // Try to extract attempt_id from various possible locations
-        extractedAttemptId = fallbackEvent.data?.attempt_id?.toString() || 
-                            fallbackEvent.data?.id?.toString() || 
-                            fallbackEvent.data?.value?.toString();
-        if (extractedAttemptId) {
-          console.log("Extracted attempt_id from fallback:", extractedAttemptId);
-        } else {
-          throw new Error(`Could not extract attempt_id from fallback event: ${JSON.stringify(fallbackEvent)}`);
-        }
-      } else {
-        throw new Error(`Could not find any relevant event in transaction result. Available events: ${JSON.stringify((result as any).events)}`);
-      }
-    }
-    
-    if (!extractedAttemptId) {
-      throw new Error("Could not extract attempt_id from any event.");
-    }
-    
-    // Store attempt_id for later use in verification
-    setAttemptId(extractedAttemptId);
-    
-    toast.success("Entry fee paid! Starting 1P authentication...", { id: toastId });
-    setGameState("fetching_challenge");
-    
-    // Step 2: Get 1P authentication challenges from verifier service
-    // Use the hunter's address as the public key (as per app.py reference)
-    const hunterAddress = account!.address;
-    console.log("Getting 1P challenges for hunter:", hunterAddress);
-    
-    try {
-      const authResponse = await getAuthOptions(extractedAttemptId.toString(), hunterAddress.toString());
-      console.log("Full auth response:", authResponse);
-      
-      // Store dynamic colors and directions
-      setDynamicColors(authResponse.colors || {});
-      setDynamicDirections(authResponse.directions || {});
-      console.log("Dynamic colors:", authResponse.colors);
-      console.log("Dynamic directions:", authResponse.directions);
-      
-      const fetchedChallenges = authResponse.challenges || [];
-      console.log("Received 1P challenges:", fetchedChallenges);
-      console.log("Number of challenges:", fetchedChallenges.length);
-      console.log("Pot difficulty:", pot?.difficulty);
-      console.log("Expected challenges based on difficulty:", pot?.difficulty);
-      
-      if (fetchedChallenges.length > 0) {
-        console.log("First challenge structure:", fetchedChallenges[0]);
-        console.log("First challenge grid length:", fetchedChallenges[0].grid?.length || 'No grid');
-        console.log("First challenge color groups:", fetchedChallenges[0].colorGroups);
-      }
-      
-      // Check if we got valid challenges
-      if (fetchedChallenges.length === 0) {
-        throw new Error("No challenges received from verifier service");
-      }
-      
-      // Set challenges for human interaction
-      setChallenges(fetchedChallenges);
-      setCurrentRound(0);
-      setSolutions([]);
-      setGameState("playing");
-    } catch (authError) {
-      console.error("Failed to get 1P challenges:", authError);
-      toast.error("Failed to get 1P challenges from verifier service", { 
-        id: toastId, 
-        description: authError instanceof Error ? authError.message : 'Unknown error'
-      });
-      setGameState("idle");
-      return;
-    }
-    
-    // Update transaction as successful
-    updateTransaction(txId, { 
-      status: 'success',
-      description: `Successfully paid entry fee for Pot #${pot!.id}`
-    });
-  };
   const submitMove = async (move: string) => {
     console.log("Submitting move:", move);
     console.log("Current solutions:", solutions);
@@ -530,7 +371,7 @@ export function PotChallengePage() {
         });
         
         let verifyResponse;
-        if (walletState?.type === 'evm') {
+        try {
           // Use EVM verifier service
           const solutions = updatedSolutions.map((solution, index) => ({
             challenge_id: index.toString(),
@@ -543,10 +384,11 @@ export function PotChallengePage() {
             walletState.address!
           );
           console.log("Response from EVM /authenticate/verify:", verifyResponse);
-        } else {
-          // Use Aptos verifier service
-          verifyResponse = await verifyAuth(attemptId.toString(), updatedSolutions);
-          console.log("Response from Aptos /authenticate/verify:", verifyResponse);
+        } catch (error) {
+          console.error("1P verification failed:", error);
+          showErrorToast("1P Verification Failed", (error as Error).message, {});
+          setGameState("lost");
+          return;
         }
         
         const { success } = verifyResponse;
@@ -562,9 +404,11 @@ export function PotChallengePage() {
           setGameState("lost");
         }
       } catch (error) {
-        console.error("1P verification failed:", error);
+        console.error("1P verification process failed:", error);
         showErrorToast("1P Verification Failed", (error as Error).message, {});
         setGameState("lost");
+      } finally {
+        toast.dismiss(toastId);
       }
     }
   };
@@ -587,54 +431,22 @@ export function PotChallengePage() {
     });
     
     try {
-      if (walletState.type === 'evm') {
-        // Use EVM expire pot
-        const success = await currentData.expirePot(pot.id);
-        if (!success) {
-          throw new Error('Failed to expire EVM pot');
-        }
-        updateTransaction(txId, { hash: pot.id }); // Using pot ID as hash for now
-      } else {
-        // Submit blockchain transaction for Aptos
-        const response = await signAndSubmitTransaction({
-          sender: account!.address,
-          data: {
-            function: `${MODULE_ADDRESS}::${MODULE_NAME}::expire_pot`,
-            typeArguments: [],
-            functionArguments: [BigInt(pot.id).toString()],
-          },
-        });
-        
-        // Update transaction with hash
-        updateTransaction(txId, { hash: response.hash });
-        
-        // Wait for transaction to complete
-        await aptos.waitForTransaction({
-          transactionHash: response.hash,
-        });
-      }
-      
-      // Update local state
+      // Use EVM expire pot
       const success = await currentData.expirePot(pot.id);
-      if (success) {
-        // Update transaction as successful
-        updateTransaction(txId, { 
-          status: 'success',
-          description: `Successfully expired Pot #${pot.id}`
-        });
-        
-        toast.success("Pot expired successfully!");
-        // Refresh the pot data
-        await currentData.fetchPotById(pot.id);
-      } else {
-        // Update transaction as failed
-        updateTransaction(txId, { 
-          status: 'failed', 
-          error: 'Failed to update local state'
-        });
-        
-        toast.error("Failed to expire pot");
+      if (!success) {
+        throw new Error('Failed to expire EVM pot');
       }
+      updateTransaction(txId, { hash: pot.id }); // Using pot ID as hash for now
+      
+      // Update transaction as successful
+      updateTransaction(txId, { 
+        status: 'success',
+        description: `Successfully expired Pot #${pot.id}`
+      });
+      
+      toast.success("Pot expired successfully!");
+      // Refresh the pot data
+      await currentData.fetchPotById(pot.id);
     } catch (error) {
       console.error('Failed to expire pot:', error);
       

@@ -3,6 +3,7 @@ import { PotCard } from "@/components/PotCard";
 import { PotCardSkeleton } from "@/components/PotCardSkeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePotStore } from "@/store/pot-store";
+import { useEVMPotStore } from "@/store/evm-pot-store";
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ import { Link } from "react-router";
 import { PartyPopper, ShieldClose, Trophy, Package, Target, XCircle } from "lucide-react";
 import { useBlockscoutTx } from "@/hooks/use-blockscout-tx";
 import { BlockscoutBalance } from "@/components/BlockscoutBalance";
+import { useWallet } from "@/components/WalletProvider";
 
 const StatCard = ({ title, value, icon: Icon }: { title: string, value: string | number, icon: React.ElementType }) => (
   <Card>
@@ -26,26 +28,31 @@ const StatCard = ({ title, value, icon: Icon }: { title: string, value: string |
   </Card>
 );
 export function DashboardPage() {
-  const { account, connected, signAndSubmitTransaction } = useWallet();
+  const { walletState } = useWallet();
   const { showCustomToast, showSuccessToast, showErrorToast } = useBlockscoutTx();
-  const allPots = usePotStore((state) => state.sortedPots);
-  const attempts = usePotStore((state) => state.attempts);
-  const loading = usePotStore((state) => state.loading);
-  const fetchPots = usePotStore((state) => state.fetchPots);
-  const expireAllPots = usePotStore((state) => state.expireAllPots);
+  
+  // EVM store
+  const allPots = useEVMPotStore((state) => state.sortedPots);
+  const attempts = useEVMPotStore((state) => state.attempts);
+  const loading = useEVMPotStore((state) => state.loading);
+  const fetchPots = useEVMPotStore((state) => state.fetchPots);
+  const evmExpirePot = useEVMPotStore((state) => state.expirePot);
+  
   const [isExpiringAll, setIsExpiringAll] = useState(false);
+  
   useEffect(() => {
-    if (connected) {
+    if (walletState?.type === 'evm') {
       fetchPots();
     }
-  }, [connected, fetchPots]);
+  }, [walletState?.type, fetchPots]);
+  
   const myCreatedPots = useMemo(() => {
-    if (!account) return [];
-    return allPots.filter(pot => pot.creator === account.address.toString());
-  }, [allPots, account]);
+    if (!walletState?.address) return [];
+    return allPots.filter(pot => pot.creator === walletState.address);
+  }, [allPots, walletState?.address]);
 
   const handleExpireAllPots = async () => {
-    if (!connected || !account) {
+    if (!walletState?.type || !walletState?.address) {
       showErrorToast("Wallet Required", "Please connect your wallet first");
       return;
     }
@@ -61,34 +68,21 @@ export function DashboardPage() {
       let successCount = 0;
       let failedCount = 0;
 
-      // Process each pot individually
+      // Process each pot individually using EVM
       for (const pot of activePots) {
         try {
-          // Submit blockchain transaction
-          const response = await signAndSubmitTransaction({
-            sender: account.address,
-            data: {
-              function: `${MODULE_ADDRESS}::${MODULE_NAME}::expire_pot`,
-              typeArguments: [],
-              functionArguments: [BigInt(pot.id).toString()],
-            },
-          });
-
-          // Wait for transaction to complete
-          await aptos.waitForTransaction({
-            transactionHash: response.hash,
-          });
-
-          successCount++;
+          // Use EVM expire pot
+          const success = await evmExpirePot(pot.id);
+          if (success) {
+            successCount++;
+          } else {
+            failedCount++;
+          }
         } catch (error) {
           console.error(`Failed to expire pot ${pot.id}:`, error);
           failedCount++;
         }
       }
-
-      // Update local state for all pots
-      const potIds = activePots.map(pot => pot.id);
-      await expireAllPots(potIds);
 
       if (successCount > 0) {
         showSuccessToast(`Successfully expired ${successCount} pot${successCount > 1 ? 's' : ''}!`, "", {});

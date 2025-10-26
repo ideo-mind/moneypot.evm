@@ -39,7 +39,7 @@ class NetworkAdapter {
   private walletType: string | null = null
   private walletAddress: string | null = null
   private evmClient: EVMClient | null = null
-  private currentChainId: number = 102031 // Default to Creditcoin Testnet
+  private currentChainId: number = 11155111 // Default to Sepolia
 
   constructor() {
     this.evmClient = new EVMClient()

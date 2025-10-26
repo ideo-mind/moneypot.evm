@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from "react"
-import { useChain } from "@blockscout/app-sdk"
 import { sepolia, getChain } from "@/config/viem"
 
 export interface ChainSwitchState {
@@ -9,7 +8,6 @@ export interface ChainSwitchState {
 }
 
 export const useChainSwitch = () => {
-  const { switchChain } = useChain()
   const [state, setState] = useState<ChainSwitchState>({
     currentChain: sepolia,
     isSwitching: false,
@@ -32,8 +30,7 @@ export const useChainSwitch = () => {
     }))
 
     try {
-      await switchChain(sepolia.id.toString())
-
+      // Since we only support Sepolia, just set it as current
       setState((prev) => ({
         ...prev,
         currentChain: sepolia,
@@ -52,7 +49,7 @@ export const useChainSwitch = () => {
       }))
       return false
     }
-  }, [switchChain])
+  }, [])
 
   const clearError = useCallback(() => {
     setState((prev) => ({

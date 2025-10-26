@@ -1,6 +1,5 @@
 import { PotCard } from "@/components/PotCard";
 import { PotCardSkeleton } from "@/components/PotCardSkeleton";
-import { usePotStore } from "@/store/pot-store";
 import { useEVMPotStore } from "@/store/evm-pot-store";
 import { useWallet } from "@/components/WalletProvider";
 import { useEffect } from "react";
@@ -8,19 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router";
 import { Badge } from "@/components/ui/badge";
 import { Network } from "lucide-react";
+import { useChainSwitch } from "@/hooks/use-chain-switch";
 export function PotsListPage() {
   const { walletState } = useWallet();
-  
-  // Old Aptos store - no longer used
-  
-  
-  
-  
-  
-  
-  
-  const aptosFetchNextBatch = usePotStore((state) => state.fetchNextBatch);
-  const aptosClearCache = usePotStore((state) => state.clearCache);
+  const { currentChain } = useChainSwitch();
   
   // EVM store
   const evmPots = useEVMPotStore((state) => state.sortedPots);
@@ -33,40 +23,20 @@ export function PotsListPage() {
   const evmFetchNextBatch = useEVMPotStore((state) => state.fetchNextBatch);
   const evmClearCache = useEVMPotStore((state) => state.clearCache);
   
-  // Get current network data based on wallet type
-  const getCurrentNetworkData = () => {
-    if (walletState?.type === 'evm') {
-      return {
-        pots: evmPots,
-        loading: evmLoading,
-        error: evmError,
-        hasMorePots: evmHasMorePots,
-        currentBatch: evmCurrentBatch,
-        totalPots: evmTotalPots,
-        fetchPots: evmFetchPots,
-        fetchNextBatch: evmFetchNextBatch,
-        clearCache: evmClearCache,
-        networkName: 'Creditcoin Testnet',
-        networkType: 'evm'
-      };
-    } else {
-      return {
-        pots: aptosPots,
-        loading: aptosLoading,
-        error: aptosError,
-        hasMorePots: aptosHasMorePots,
-        currentBatch: aptosCurrentBatch,
-        totalPots: aptosTotalPots,
-        fetchPots: aptosFetchPots,
-        fetchNextBatch: aptosFetchNextBatch,
-        clearCache: aptosClearCache,
-        networkName: 'Aptos Testnet',
-        networkType: 'aptos'
-      };
-    }
+  // Use EVM data directly since we only support EVM now
+  const currentData = {
+    pots: evmPots,
+    loading: evmLoading,
+    error: evmError,
+    hasMorePots: evmHasMorePots,
+    currentBatch: evmCurrentBatch,
+    totalPots: evmTotalPots,
+    fetchPots: evmFetchPots,
+    fetchNextBatch: evmFetchNextBatch,
+    clearCache: evmClearCache,
+    networkName: currentChain.name,
+    networkType: 'evm'
   };
-  
-  const currentData = getCurrentNetworkData();
   
   useEffect(() => {
     currentData.fetchPots();
@@ -75,9 +45,9 @@ export function PotsListPage() {
     <div className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
       <div className="text-center mb-16">
         <div className="flex items-center justify-center gap-3 mb-4">
-          <h1 className="text-4xl md:text-5xl font-display font-bold">Money Pots</h1>
+          <h1 className="text-4xl md:text-5xl font-display font-bold">Treasure Pots</h1>
           {walletState?.type && (
-            <Badge variant={walletState.type === 'evm' ? 'default' : 'secondary'} className="flex items-center gap-1">
+            <Badge variant="default" className="flex items-center gap-1">
               <Network className="w-3 h-3" />
               {currentData.networkName}
             </Badge>
@@ -88,7 +58,7 @@ export function PotsListPage() {
         </p>
         {!walletState?.type && (
           <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
-            Connect a wallet to view pots from Aptos or Creditcoin networks
+            Connect a wallet to view pots from {currentChain.name}
           </p>
         )}
       </div>

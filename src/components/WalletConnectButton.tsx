@@ -13,6 +13,7 @@ import { getConnectedWallet, switchNetwork, addNetwork } from '@/lib/web3onboard
 import { AlertTriangle, ChevronDown, Coins, Copy, LogOut, Wallet, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useWallet } from './WalletProvider';
+import { useChainSwitch } from '@/hooks/use-chain-switch';
 
 interface WalletBalances {
   usdc: number | null;
@@ -22,6 +23,7 @@ interface WalletBalances {
 
 export function WalletConnectButton() {
   const { walletState, connectEVM, disconnect } = useWallet();
+  const { currentChain } = useChainSwitch();
   const [balances, setBalances] = useState<WalletBalances>({
     usdc: null,
     ctc: null,
@@ -40,7 +42,7 @@ export function WalletConnectButton() {
           // Get current chain ID from the provider
           evmWallet.provider.request({ method: 'eth_chainId' })
             .then((chainId: string) => {
-              const isCorrectNetwork = chainId === '0x18e7f'; // Creditcoin testnet chain ID in hex (102031)
+              const isCorrectNetwork = chainId === `0x${currentChain.id.toString(16)}`; // Current chain ID in hex
               setIsWrongNetwork(!isCorrectNetwork);
             })
             .catch(() => {
@@ -158,7 +160,7 @@ export function WalletConnectButton() {
           <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
             <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
             <span className="text-sm text-red-700 dark:text-red-300">
-              Wrong network! Please switch to Creditcoin Testnet
+              Wrong network! Please switch to {currentChain.name}
             </span>
             <Button
               size="sm"
@@ -212,7 +214,7 @@ export function WalletConnectButton() {
               <div className="flex items-center gap-2">
                 <Wifi className={`w-3 h-3 ${isWrongNetwork ? 'text-red-500' : 'text-green-500'}`} />
                 <span className={`text-xs ${isWrongNetwork ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                  Creditcoin Testnet
+                  {currentChain.name}
                 </span>
                 {isWrongNetwork && (
                   <span className="text-xs text-red-500">(Wrong Network)</span>

@@ -4,7 +4,7 @@ import {
   evmVerifierService,
   EVMVerifierServiceClient,
 } from "@/lib/evm-verifier-api"
-import { sepolia } from "@/config/viem"
+import { sepolia, getChain } from "@/config/viem"
 
 export interface AirdropResult {
   success: boolean
@@ -24,14 +24,14 @@ class EVMFaucetService {
 
   constructor(
     baseUrl: string = "https://auth.money-pot.unreal.art",
-    chainId: number = 102031
+    chainId: number = 11155111
   ) {
     this.baseUrl = baseUrl
     this.chainId = chainId
   }
 
   /**
-   * Request airdrop for CTC and USDC tokens
+   * Request airdrop for ETH and PYUSD tokens
    * @param params - Airdrop parameters
    * @returns Promise<AirdropResult>
    */
@@ -112,8 +112,8 @@ class EVMFaucetService {
    * @returns boolean
    */
   isAirdropAvailable(): boolean {
-    // Only available for Creditcoin EVM testnet
-    return this.chainId === 102031
+    // Only available for Sepolia
+    return this.chainId === 11155111
   }
 
   /**
@@ -121,12 +121,17 @@ class EVMFaucetService {
    * @returns object with airdrop details
    */
   getAirdropInfo() {
+    const chain = getChain(this.chainId)
     return {
       available: this.isAirdropAvailable(),
       amount: 200,
-      tokens: ["CTC", "USDC"],
-      network: "Creditcoin Testnet",
+      tokens: ["ETH", "PYUSD"],
+      network: chain.name,
       chainId: this.chainId,
+      faucets: {
+        eth: chain.nativeCurrency.faucet || [],
+        pyusd: chain.custom?.moneypot?.token?.faucet || [],
+      },
     }
   }
 }

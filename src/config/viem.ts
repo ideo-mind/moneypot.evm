@@ -26,6 +26,9 @@ export const sepolia = defineChain({
     decimals: 18,
     name: "Ether",
     symbol: "ETH",
+    faucet: [
+      "https://cloud.google.com/application/web3/faucet/ethereum/sepolia",
+    ],
   },
   rpcUrls: {
     default: {
@@ -64,6 +67,9 @@ export const sepolia = defineChain({
         name: "PayPal USD",
         decimals: 6,
         abis: erc20Abi,
+        faucet: [
+          "https://cloud.google.com/application/web3/faucet/ethereum/sepolia/pyusd",
+        ],
       },
     },
     onep: {
@@ -141,7 +147,7 @@ export function getPublicClient(
 }
 
 /**
- * Get the default public client (Creditcoin Testnet)
+ * Get the default public client (Sepolia)
  */
 export function getDefaultPublicClient(): PublicClient {
   return getPublicClient(getDefaultChain().id)
