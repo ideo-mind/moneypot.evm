@@ -64,7 +64,6 @@ class EVMVerifierServiceClient {
     const url = `${this.baseUrl}${endpoint}`
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      MONEYPOT_CHAIN: this.chainId.toString(),
       ...additionalHeaders,
     }
 

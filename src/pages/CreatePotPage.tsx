@@ -295,22 +295,23 @@ export function CreatePotPage() {
       iat: timestamp,
       iss: walletState!.address!,
       exp: timestamp + 3600, // 1 hour
+      chain_id: evmContractService.currentChainId || 11155111,
     };
 
     // Get encryption key
     const { public_key } = await evmVerifierService.registerOptions();
     
-    // Encrypt payload
-    const encryptedPayload = EVMVerifierServiceClient.encryptPayload(payload);
-    
-    // Create signature using the connected EVM wallet
-    const message = JSON.stringify(payload);
+    // Create signature - sign the payload JSON string (matching demo.py format)
+    const payloadJson = JSON.stringify(payload, null, 0).replace(/\s/g, ""); // Compact JSON format
     const evmWallet = getConnectedWallet();
     if (!evmWallet) {
       throw new Error('No EVM wallet connected');
     }
     
-    const signature = await EVMVerifierServiceClient.createEVMSignature(evmWallet, message);
+    const signature = await EVMVerifierServiceClient.createEVMSignature(evmWallet, payloadJson);
+    
+    // Encrypt the signed payload as hex
+    const encryptedPayload = Buffer.from(payloadJson, "utf-8").toString("hex");
 
     // Register with verifier
     await evmVerifierService.registerVerify(

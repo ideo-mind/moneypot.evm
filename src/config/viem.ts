@@ -47,7 +47,11 @@ export const sepolia = defineChain({
     },
     public: {
       http: [
-        // "https://ethereum-sepolia-rpc.publicnode.com",
+        "https://ethereum-sepolia-rpc.publicnode.com",
+        "https://eth-sepolia.public.blastapi.io",
+        "https://eth-sepolia-testnet.rpc.grove.city/v1/01fdb492",
+        "https://0xrpc.io/sep",
+
         // "https://rpc.sepolia.org",
         "https://sepolia.gateway.tenderly.co",
       ],
