@@ -113,7 +113,7 @@ export const BlockscoutBalance: React.FC<BlockscoutBalanceProps> = ({
   }
 
   const usdcToken = tokenBalances.find(token => 
-    token.symbol === 'USDC' || token.address.toLowerCase() === '0xEC020aA4De9567Ae9dF9f43Da71414aE4932F6f3'.toLowerCase()
+    token.symbol === 'USD' || token.address.toLowerCase() === '0xEC020aA4De9567Ae9dF9f43Da71414aE4932F6f3'.toLowerCase()
   );
 
   const nativeToken = tokenBalances.find(token => 

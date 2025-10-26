@@ -607,7 +607,7 @@ class EVMMoneyPotApp:
         # Get pot info for verification
         pot_info = get_pot_info(self.contract, pot_id)
         if pot_info:
-            print(f"✅ Amount: {pot_info.get('amount')} USDC")
+            print(f"✅ Amount: {pot_info.get('amount')} USD")
         
         # Step 2: Register pot with verifier service
         print("\n🔐 Registering with verifier service...")

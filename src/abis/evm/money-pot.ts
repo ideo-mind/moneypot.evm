@@ -28,9 +28,9 @@ export interface AttemptData {
 }
 
 export interface CreatePotParams {
-  amount: bigint // Total amount in USDC (6 decimals)
+  amount: bigint // Total amount in USD (6 decimals)
   durationSeconds: bigint // Duration in seconds
-  fee: bigint // Entry fee in USDC (6 decimals)
+  fee: bigint // Entry fee in USD (6 decimals)
   oneFaAddress: Address // 1Password address
 }
 
@@ -86,7 +86,7 @@ export const contractFunctions = {
     functionName: "getPot",
   },
 
-  // Get user's USDC balance
+  // Get user's USD balance
   getBalance: {
     abi: moneyPotABI,
     functionName: "getBalance",

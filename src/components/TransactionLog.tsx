@@ -122,7 +122,7 @@ const TransactionItem: React.FC<{ transaction: Transaction }> = ({ transaction }
                 <div>
                   <span className="font-medium text-slate-700 dark:text-slate-300">Amount:</span>
                   <span className="ml-2 text-slate-600 dark:text-slate-400">
-                    {transaction.amount} USDC
+                    {transaction.amount} USD
                   </span>
                 </div>
               )}

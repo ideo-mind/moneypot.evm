@@ -39,7 +39,7 @@ export function FaucetPage() {
       setLastResult(result);
 
       if (result.success) {
-        showSuccessToast('Airdrop Successful!', `Received ${result.message || '200 CTC + USDC'}`, {});
+        showSuccessToast('Airdrop Successful!', `Received ${result.message || '200 CTC + USD'}`, {});
       } else {
         showErrorToast('Airdrop Failed', result.error || 'Unknown error', {});
       }

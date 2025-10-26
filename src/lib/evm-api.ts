@@ -218,7 +218,7 @@ class EVMContractService {
     }
   }
 
-  // Get user's USDC balance
+  // Get user's USD balance
   async getBalance(address: Address): Promise<number> {
     try {
       const publicClient = this.getPublicClient()

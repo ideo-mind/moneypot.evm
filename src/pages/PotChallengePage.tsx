@@ -225,7 +225,7 @@ export function PotChallengePage() {
       status: 'pending',
       description: `Attempting Pot #${pot.id}`,
       potId: pot.id,
-      amount: `${pot.entryFee} USDC`,
+      amount: `${pot.entryFee} USD`,
     });
     
     try {
@@ -542,7 +542,7 @@ export function PotChallengePage() {
                 <Button variant="link" size="sm" onClick={() => validateKey(oneFaPrivateKey)} disabled={!oneFaPrivateKey || keyState === 'validating'}>Validate Key</Button>
               </div>
             </div>
-            <p className="text-lg">Pay the entry fee of <span className="font-bold text-brand-gold">{pot.entryFee} USDC</span> to begin.</p>
+            <p className="text-lg">Pay the entry fee of <span className="font-bold text-brand-gold">{pot.entryFee} USD</span> to begin.</p>
             <div className="space-y-3">
               {pot.isExpired ? (
                 <div className="w-full max-w-xs mx-auto bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-bold text-lg h-16 rounded-lg flex items-center justify-center cursor-not-allowed">
@@ -555,7 +555,7 @@ export function PotChallengePage() {
                   size="lg" 
                   className="w-full max-w-xs mx-auto bg-brand-green hover:bg-brand-green/90 text-white font-bold text-lg h-16"
                 >
-                  {connected ? `Pay ${pot.entryFee} USDC & Start` : "Connect Wallet to Start"}
+                  {connected ? `Pay ${pot.entryFee} USD & Start` : "Connect Wallet to Start"}
                 </Button>
               )}
               
@@ -745,7 +745,7 @@ export function PotChallengePage() {
           </h2>
           <p className="text-xl text-muted-foreground">
             {gameState === "verifying" && "Checking your 1P solutions with the verifier service..."}
-            {gameState === "won" && `🎉 Congratulations! You've successfully solved the 1P challenge! ${pot.potentialReward.toLocaleString()} USDC is on its way to your wallet.`}
+            {gameState === "won" && `🎉 Congratulations! You've successfully solved the 1P challenge! ${pot.potentialReward.toLocaleString()} USD is on its way to your wallet.`}
             {gameState === "lost" && "❌ 1P authentication failed. The pot remains locked. Better luck next time!"}
           </p>
           <Button onClick={() => navigate('/pots')} size="lg">Back to Pots</Button>
@@ -773,11 +773,11 @@ export function PotChallengePage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg">
                   <div className="font-semibold text-green-700 dark:text-green-300">Pot Value</div>
-                  <div className="text-lg font-bold">{pot?.totalValue ? pot.totalValue.toFixed(2) : '0'} USDC</div>
+                  <div className="text-lg font-bold">{pot?.totalValue ? pot.totalValue.toFixed(2) : '0'} USD</div>
                 </div>
                 <div className="bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg">
                   <div className="font-semibold text-green-700 dark:text-green-300">Entry Fee</div>
-                  <div className="text-lg font-bold">{pot?.entryFee ? pot.entryFee.toFixed(2) : '0'} USDC</div>
+                  <div className="text-lg font-bold">{pot?.entryFee ? pot.entryFee.toFixed(2) : '0'} USD</div>
                 </div>
               </div>
               

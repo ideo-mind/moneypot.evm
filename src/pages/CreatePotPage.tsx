@@ -240,8 +240,8 @@ export function CreatePotPage() {
       hash: '', // Will be updated when we get the response
       type: 'create_pot',
       status: 'pending',
-      description: `Creating pot with ${amount} USDC`,
-      amount: `${amount} USDC`,
+      description: `Creating pot with ${amount} USD`,
+      amount: `${amount} USD`,
     });
     
     try {
@@ -335,10 +335,10 @@ export function CreatePotPage() {
     updateTransaction(txId, { 
       status: 'success', 
       potId: potId,
-      description: `Successfully created Pot #${potId} with ${amount} USDC`
+      description: `Successfully created Pot #${potId} with ${amount} USD`
     });
     
-    showSuccessToast("Pot Created Successfully!", `Successfully created Pot #${potId} with ${amount} USDC`, { potId, amount: `${amount} USDC` });
+    showSuccessToast("Pot Created Successfully!", `Successfully created Pot #${potId} with ${amount} USD`, { potId, amount: `${amount} USD` });
     
     setCreationSuccess(true);
     setTimeout(() => navigate("/pots"), 3000);
@@ -378,11 +378,11 @@ export function CreatePotPage() {
                     <div>
                       <CardHeader>
                         <CardTitle className="font-display text-2xl">Step 1: Define Your Pot</CardTitle>
-                        <CardDescription>Set the total USDC amount and how long the pot will be active.</CardDescription>
+                        <CardDescription>Set the total USD amount and how long the pot will be active.</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-6">
                         <div className="space-y-2">
-                          <Label htmlFor="amount">Pot Amount (USDC)</Label>
+                          <Label htmlFor="amount">Pot Amount (USD)</Label>
                           <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} placeholder="e.g., 1000" min="0.001" />
                         </div>
                         <div className="space-y-4">
@@ -551,7 +551,7 @@ export function CreatePotPage() {
                       </CardHeader>
                       <CardContent className="space-y-6">
                         <div className="space-y-4">
-                          <Label>Entry Fee (USDC)</Label>
+                          <Label>Entry Fee (USD)</Label>
                           <div className="space-y-3">
                             <div className="flex items-center gap-4">
                               <div className="relative">
@@ -692,9 +692,9 @@ export function CreatePotPage() {
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <ul className="space-y-2 text-sm">
-                          <li className="flex justify-between"><span>Pot Amount:</span> <span className="font-medium">${amount} USDC</span></li>
+                          <li className="flex justify-between"><span>Pot Amount:</span> <span className="font-medium">${amount} USD</span></li>
                           <li className="flex justify-between"><span>Expires:</span> <span className="font-medium">{customEndDate ? format(customEndDate, "PPP 'at' p") : "Not set"}</span></li>
-                          <li className="flex justify-between"><span>Entry Fee:</span> <span className="font-medium">${entryFee.toFixed(4)} USDC</span></li>
+                          <li className="flex justify-between"><span>Entry Fee:</span> <span className="font-medium">${entryFee.toFixed(4)} USD</span></li>
                           <li className="flex justify-between items-center">
                             <span>Password:</span>
                             <div className="flex items-center gap-2">
@@ -730,7 +730,7 @@ export function CreatePotPage() {
                           )}
                         </ul>
                         <Button onClick={handleCreatePot} disabled={isSubmitting || !walletState.isConnected || !password || Object.keys(colorMap).length < mappableDirections.length} className="w-full bg-brand-green hover:bg-brand-green/90 text-white font-bold text-lg py-6">
-                          {isSubmitting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : `Deposit ${amount} USDC & Create Pot`}
+                          {isSubmitting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : `Deposit ${amount} USD & Create Pot`}
                         </Button>
                       </CardContent>
                     </div>

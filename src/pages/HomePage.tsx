@@ -59,7 +59,7 @@ export function HomePage() {
               variants={itemVariants}
               className="max-w-2xl mx-auto text-lg md:text-xl text-slate-600 dark:text-slate-300"
             >
-              Money Pot is a provably fair gaming dApp on Creditcoin. Create USDC-funded treasure hunts secured by your mind, or test your skills to win big.
+              Money Pot is a provably fair gaming dApp on Creditcoin. Create USD-funded treasure hunts secured by your mind, or test your skills to win big.
             </motion.p>
             <motion.div
               variants={itemVariants}
@@ -108,7 +108,7 @@ export function HomePage() {
                 </div>
               </div>
               <h3 className="text-2xl font-display font-bold mb-2">1. Create a Pot</h3>
-              <p className="text-slate-600 dark:text-slate-300">Deposit USDC and set up a unique, brain-based authentication challenge. You earn from every attempt.</p>
+              <p className="text-slate-600 dark:text-slate-300">Deposit USD and set up a unique, brain-based authentication challenge. You earn from every attempt.</p>
             </motion.div>
             <motion.div variants={itemVariants} className="text-center p-6">
               <div className="flex justify-center mb-4">
