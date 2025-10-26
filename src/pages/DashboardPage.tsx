@@ -15,6 +15,7 @@ import { useBlockscoutTx } from "@/hooks/use-blockscout-tx";
 import { BlockscoutBalance } from "@/components/BlockscoutBalance";
 import { useWallet } from "@/components/WalletProvider";
 import { evmContractService } from "@/lib/evm-api";
+import { Address, isAddressEqual } from "viem";
 
 const StatCard = ({ title, value, icon: Icon }: { title: string, value: string | number, icon: React.ElementType }) => (
   <Card>
@@ -169,7 +170,7 @@ export function DashboardPage() {
           {myCreatedPots.length > 0 && (
             <div className="mb-6 flex justify-between items-center">
               <h3 className="text-lg font-semibold">My Created Pots ({myCreatedPots.length})</h3>
-              {myCreatedPots.some(pot => pot.is_active && !pot.isExpired) && (
+              {myCreatedPots.some(pot=>isAddressEqual(pot.creator as Address, walletState.address as Address)) && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button 

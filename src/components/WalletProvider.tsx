@@ -99,7 +99,10 @@ export const WalletProvider = ({ children }: PropsWithChildren) => {
   const disconnect = async () => {
     setWalletState(prev => ({ ...prev, isLoading: true }))
     try {
-      await onboard.disconnectWallet()
+      const connectedWallets = onboard.state.get().wallets
+      if (connectedWallets.length > 0) {
+        await onboard.disconnectWallet({ label: connectedWallets[0].label })
+      }
       // State will be updated by the subscription handler
     } catch (error) {
       console.error('Disconnect error:', error)
