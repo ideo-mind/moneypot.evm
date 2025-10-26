@@ -52,7 +52,7 @@ export interface EVMTransaction {
 
 class EVMContractService {
   private walletClient: any = null
-  private currentChainId: number = 11155111 // Default to Sepolia
+  public currentChainId: number = 11155111 // Default to Sepolia
   private originalWallet: any = null
 
   setWalletClient(wallet: any, chainId?: number) {

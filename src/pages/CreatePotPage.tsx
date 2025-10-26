@@ -233,7 +233,7 @@ export function CreatePotPage() {
     }
     
     setIsSubmitting(true);
-    showPendingToast("Creating Money Pot", `Submitting transaction to Creditcoin...`, "");
+    showPendingToast("Creating Money Pot", `Submitting transaction to blockchain...`, "");
     
     // Add transaction to log
     const txId = addTransaction({

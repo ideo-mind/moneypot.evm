@@ -9,7 +9,7 @@ export const MAPPABLE_DIRECTIONS = ["Up", "Down", "Left", "Right"]
 
 // Network configurations
 export const NETWORKS = {
-  CREDITCOIN: {
+  SEPOLIA: {
     name: "Sepolia",
     chainId: "11155111",
     symbol: "ETH",

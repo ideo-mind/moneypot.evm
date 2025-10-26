@@ -24,7 +24,7 @@ load_dotenv()
 
 # Configuration
 MONEY_AUTH_URL = os.getenv("MONEY_AUTH_URL", "https://auth.money-pot.unreal.art")
-CHAIN_ID = int(os.getenv("CHAIN_ID", "102031"))  # Creditcoin Testnet
+CHAIN_ID = int(os.getenv("CHAIN_ID", "102031"))  # Testnet chain ID
 
 # Dynamic configuration (will be fetched from /chains endpoint)
 EVM_RPC_URL = None

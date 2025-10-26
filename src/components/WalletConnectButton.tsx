@@ -140,7 +140,7 @@ export function WalletConnectButton() {
 
   const switchToTestnet = async () => {
     try {
-      await switchNetwork(102031); // Creditcoin testnet chain ID
+      await switchNetwork(102031); // Testnet chain ID
     } catch (error) {
       console.error('Failed to switch EVM network:', error);
       // If switching fails, try adding the network first

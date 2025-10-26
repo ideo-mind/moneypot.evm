@@ -39,7 +39,7 @@ export function NetworkSelector() {
 
   const getChainBadgeColor = (chainId: number) => {
     switch (chainId) {
-      case 102031: // Creditcoin
+      case 102031: // Testnet
         return 'bg-brand-green';
       case 11155111: // Sepolia
         return 'bg-blue-500';

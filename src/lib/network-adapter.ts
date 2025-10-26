@@ -97,18 +97,55 @@ class EVMClient implements NetworkClient {
     const fee = BigInt(Math.floor(params.fee * 10 ** 6))
     const durationSeconds = BigInt(params.duration * 60 * 60)
 
-    // Store password with verifier service
-    const oneFaAddress = await evmVerifierService.storePassword(
-      params.password,
-      params.colorMap
-    )
+    // Step 1: Create pot on blockchain with creator's address as placeholder 1FA
+    const wallet = getConnectedWallet()
+    if (!wallet || !wallet.accounts || wallet.accounts.length === 0) {
+      throw new Error("No wallet connected")
+    }
 
-    return evmContractService.createPot({
+    const creatorAddress = wallet.accounts[0].address
+
+    // Create pot on blockchain first (1FA address is just a placeholder, doesn't matter)
+    const potId = await evmContractService.createPot({
       amount,
       durationSeconds,
       fee,
-      oneFaAddress,
+      oneFaAddress: creatorAddress, // Just a placeholder address parameter
     })
+
+    // Step 2: Register pot with verifier service
+    const currentTime = Math.floor(Date.now() / 1000)
+
+    const payload = {
+      pot_id: potId,
+      "1p": params.password,
+      legend: params.colorMap,
+      iat: currentTime,
+      iss: creatorAddress,
+      exp: currentTime + 3600,
+      chain_id: evmContractService.currentChainId || 11155111,
+    }
+
+    // Create signature - sign the payload JSON string directly (matching demo.py)
+    // Use compact JSON formatting (json.dumps with separators=(',', ':'))
+    const payloadJson = JSON.stringify(payload, null, 0).replace(/\s/g, "")
+    const signature = await EVMVerifierServiceClient.createEVMSignature(
+      wallet,
+      payloadJson
+    )
+
+    // Register with verifier
+    const registerResult = await evmVerifierService.registerVerify(
+      payload,
+      signature
+    )
+
+    if (!registerResult.success && registerResult.error) {
+      console.error("Failed to register pot:", registerResult.error)
+      // Don't throw - pot is created on chain, registration can be retried
+    }
+
+    return potId
   }
 
   async attemptPot(params: AttemptPotParams): Promise<string> {
