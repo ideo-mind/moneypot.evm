@@ -128,9 +128,12 @@ class EVMContractService {
         args: [account, chainConfig.contractAddress],
       })
 
+      console.log("Current allowance:", allowance.toString())
+      console.log("Required amount:", amount.toString())
+
       // If allowance is insufficient, approve max uint256
       if (allowance < amount) {
-        console.log("Insufficient allowance, approving max tokens...")
+        console.log("⚠️  Insufficient allowance, approving max tokens...")
 
         // Approve max uint256 (2^256 - 1) for best UX - only needs to approve once
         const maxApproval = BigInt(
@@ -238,7 +241,10 @@ class EVMContractService {
         throw new Error("Pot not found")
       }
 
+      console.log("Pot entry fee (bigint):", potData.fee.toString())
+
       // Ensure token approval for the entry fee
+      console.log("Checking approval for entry fee...")
       await this.ensureTokenApproval(potData.fee)
 
       const hash = await walletClient.writeContract({
@@ -252,6 +258,11 @@ class EVMContractService {
       const receipt = await publicClient.waitForTransactionReceipt({ hash })
 
       if (receipt.status === "success") {
+        console.log(
+          "Attempt transaction successful, logs:",
+          receipt.logs.length
+        )
+
         // Extract attempt ID from PotAttempted event
         for (const log of receipt.logs) {
           try {
@@ -261,14 +272,23 @@ class EVMContractService {
               topics: log.topics,
             })
 
+            console.log(
+              "Decoded event:",
+              decodedEvent.eventName,
+              decodedEvent.args
+            )
+
             if (decodedEvent.eventName === "PotAttempted") {
-              const attemptId = decodedEvent.args.id
+              const attemptId = (decodedEvent.args as any).attemptId
+              console.log("✅ Attempt created with ID:", attemptId.toString())
               return attemptId.toString()
             }
           } catch (e) {
-            // Not our event, continue
+            // Not our event, continue silently
           }
         }
+
+        console.error("PotAttempted event not found in logs")
       }
 
       throw new Error("Transaction failed - PotAttempted event not found")
