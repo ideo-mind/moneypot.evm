@@ -196,20 +196,14 @@ class EVMContractService {
               topics: log.topics,
             })
 
-            console.log(
-              "Decoded event:",
-              decodedEvent.eventName,
-              decodedEvent.args
-            )
-
             if (decodedEvent.eventName === "PotCreated") {
               const potId = decodedEvent.args.id
-              console.log("Pot created with ID:", potId.toString())
+              console.log("✅ Pot created with ID:", potId.toString())
               return potId.toString()
             }
           } catch (e) {
-            // Not our event, continue
-            console.log("Failed to decode log:", e)
+            // Not our event (e.g., Transfer events from ERC20), continue silently
+            // Don't log errors for unrelated events
           }
         }
 

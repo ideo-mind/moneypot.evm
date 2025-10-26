@@ -267,19 +267,13 @@ export function CreatePotPage() {
 
   const handleEVMCreatePot = async (finalOneFaAddress: string, txId: string) => {
     // Create pot using network adapter
-    const result = await adapter.client.createPot({
+    const potId = await adapter.client.createPot({
       amount,
       duration: getDurationInSeconds(),
       fee: entryFee,
       password,
       colorMap,
     });
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to create EVM pot');
-    }
-
-    const potId = result.data;
     
     // Update transaction with hash (we'll need to get this from the contract service)
     updateTransaction(txId, { hash: potId }); // Using potId as hash for now
@@ -322,11 +316,11 @@ export function CreatePotPage() {
     
     // Fetch the created pot from blockchain
     const potData = await adapter.client.getPot(potId);
-    if (!potData.success || !potData.data) {
+    if (!potData) {
       throw new Error('Failed to fetch created pot');
     }
     
-    const newPot = transformEVMPotToPot(potData.data);
+    const newPot = transformEVMPotToPot(potData);
     addEVMPot(newPot);
     
     // Refresh the pots list
