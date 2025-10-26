@@ -3,7 +3,7 @@ import injectedModule from "@web3-onboard/injected-wallets"
 import walletConnectModule from "@web3-onboard/walletconnect"
 import coinbaseModule from "@web3-onboard/coinbase"
 import metamaskModule from "@web3-onboard/metamask"
-import { CHAINS, EVM_CONFIG, creditcoinTestnet } from "@/config/viem"
+import { CHAINS, CHAIN_DEFAULT } from "@/config/viem"
 import { toHex } from "viem"
 
 // Initialize the injected wallets module
@@ -11,7 +11,7 @@ const injected = injectedModule()
 
 // Initialize WalletConnect module
 const walletConnect = walletConnectModule({
-  projectId: EVM_CONFIG.WALLETCONNECT_PROJECT_ID,
+  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || "your-project-id",
   requiredChains: [CHAINS[0].id],
   optionalChains: CHAINS.map((chain) => chain.id),
 })
@@ -45,9 +45,6 @@ export const onboard = Onboard({
   },
   notify: {
     enabled: true,
-    transactionHandler: (transaction) => {
-      console.log("Transaction:", transaction)
-    },
   },
   appMetadata: {
     name: "Money Pot",
@@ -77,7 +74,10 @@ export const connectWallet = async () => {
 // Helper function to disconnect wallet
 export const disconnectWallet = async () => {
   try {
-    await onboard.disconnectWallet()
+    const connectedWallets = onboard.state.get().wallets
+    if (connectedWallets.length > 0) {
+      await onboard.disconnectWallet({ label: connectedWallets[0].label })
+    }
   } catch (error) {
     console.error("Failed to disconnect wallet:", error)
     throw error
@@ -115,11 +115,11 @@ export const addNetwork = async () => {
         method: "wallet_addEthereumChain",
         params: [
           {
-            chainId: `0x${EVM_CONFIG.CHAIN_ID.toString(16)}`,
-            chainName: EVM_CONFIG.CHAIN_NAME,
-            nativeCurrency: EVM_CONFIG.NATIVE_CURRENCY,
-            rpcUrls: ["https://rpc.cc3-testnet.creditcoin.network"],
-            blockExplorerUrls: [EVM_CONFIG.EXPLORER_URL],
+            chainId: `0x${CHAIN_DEFAULT.id.toString(16)}`,
+            chainName: CHAIN_DEFAULT.name,
+            nativeCurrency: CHAIN_DEFAULT.nativeCurrency,
+            rpcUrls: CHAIN_DEFAULT.rpcUrls.default.http,
+            blockExplorerUrls: [CHAIN_DEFAULT.blockExplorers.default.url],
           },
         ],
       })

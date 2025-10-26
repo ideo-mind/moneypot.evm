@@ -29,6 +29,7 @@ export const WalletProvider = ({ children }: PropsWithChildren) => {
     error: null,
   });
 
+
   // Monitor EVM wallet connection
   useEffect(() => {
     try {

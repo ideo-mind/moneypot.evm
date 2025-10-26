@@ -1,14 +1,21 @@
-import moneyPotABIJson from "@/abis/evm/MoneyPot.json"
+// MoneyPot contract ABI - inline definition to avoid import issues
+import { abi } from "@abis/MoneyPot.json"
 
-// Export the ABI as an array (viem expects an array, not an object)
-export const moneyPotABI = moneyPotABIJson.abi
+export const moneyPotABI = abi
+
 import {
   createPublicClient,
   createWalletClient,
   http,
   webSocket,
   defineChain,
+  Chain,
+  PublicClient,
+  erc20Abi,
 } from "viem"
+
+// Export Chain type for use in other config files
+export { type Chain } from "viem"
 
 // Creditcoin EVM Testnet Configuration - Hardcoded values
 export const creditcoinTestnet = defineChain({
@@ -37,62 +44,172 @@ export const creditcoinTestnet = defineChain({
   },
   custom: {
     moneypot: {
-      address: "0xEC020aA4De9567Ae9dF9f43Da71414aE4932F6f3",
+      address: "0xB51Da34a5a405bC9e7e3733fCe9A2AEf9871590d",
       abis: moneyPotABI,
       token: {
-        address: "0xEC020aA4De9567Ae9dF9f43Da71414aE4932F6f3",
+        address: "0xB51Da34a5a405bC9e7e3733fCe9A2AEf9871590d",
         symbol: "USDC",
         name: "Money Pot",
         decimals: 6,
         abis: moneyPotABI,
-      },
-      colors: {
-        red: "#ef4444",
-        green: "#22c55e",
-        blue: "#3b82f6",
-        yellow: "#eab308",
-      },
-      directions: {
-        up: "U",
-        down: "D",
-        left: "L",
-        right: "R",
       },
     },
   },
   testnet: true,
 })
 
-export const CHAINS = [creditcoinTestnet]
-export const CHAIN_DEFAULT = CHAINS[0]
+export const sepolia = defineChain({
+  id: 11155111,
+  name: "Sepolia",
+  nativeCurrency: {
+    decimals: 18,
+    name: "Ether",
+    symbol: "ETH",
+  },
+  rpcUrls: {
+    default: {
+      http: [
+        "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
+        "https://ethereum-sepolia-rpc.publicnode.com",
+      ],
+      webSocket: [
+        "wss://sepolia.infura.io/ws/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
+      ],
+    },
+    public: {
+      http: [
+        "https://sepolia.rpc.hypersync.xyz",
+        "https://11155111.rpc.hypersync.xyz",
+        // ABOVE is the best that's what we are going with
+        // "https://rpc.sepolia.org",
+        // "https://ethereum-sepolia-rpc.publicnode.com",
+        // "https://sepolia-bor-rpc.publicnode.com",
+      ],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Sepolia Explorer",
+      url: "https://eth-sepolia.blockscout.com",
+    },
+  },
+  custom: {
+    moneypot: {
+      address: "0x03EE9A0211EA332f70b9D30D14a13FD8e465aa43",
+      abis: moneyPotABI,
+      token: {
+        address: "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9",
+        symbol: "PYUSD",
+        name: "PayPal USD",
+        decimals: 6,
+        abis: erc20Abi,
+      },
+    },
+    onep: {
+      // TODO: one p yet to be deployed
+    },
+  },
+  testnet: true,
+})
 
-// Contract Configuration - From chain config
-export const MONEY_POT_CONTRACT_ADDRESS = CHAIN_DEFAULT.custom.moneypot
-  .address as `0x${string}`
-export const USDC_TOKEN_ADDRESS = CHAIN_DEFAULT.custom.moneypot.token
-  .address as `0x${string}`
+// Contract addresses are now accessed through chain configuration
+// Use getMoneyPotContractAddress(chainId) and getOnePContractAddress(chainId) from @config/networks
 
-// WalletConnect Configuration - Hardcoded
-export const WALLETCONNECT_PROJECT_ID = import.meta.env
-  .VITE_WALLETCONNECT_PROJECT_ID
+// Simple hardcoded chains - Sepolia first as default
 
-// Create public client for read operations
+// Simple hardcoded chains array - Sepolia first as default
+export const CHAINS = [sepolia, creditcoinTestnet]
+
+// Simple default chain - Sepolia
+export const CHAIN_DEFAULT = sepolia
+
+/**
+ * Get a Chain definition by chainId.
+ * @param chainId EVM chain id (e.g., 102031 Creditcoin, 11155111 Sepolia)
+ * @returns Chain or throws error if not supported
+ */
+export function getChain(chainId: number): Chain {
+  const chain = CHAINS.find((c) => c.id === chainId)
+  if (!chain) {
+    throw new Error(`Unsupported chain ID: ${chainId}`)
+  }
+  return chain
+}
+
+/**
+ * Get the default Chain used by the router (Sepolia).
+ */
+export function getDefaultChain(): Chain {
+  return sepolia
+}
+
+/**
+ * Randomly select an RPC from the list for load balancing
+ */
+export function pickRpc(rpcs: readonly string[]) {
+  return rpcs[Math.floor(Math.random() * rpcs.length)]
+}
+
+/**
+ * Get or create a public client for the specified chain.
+ * No caching - creates fresh client for RPC rotation.
+ * @param chainId EVM chain id (optional, defaults to default chain)
+ * @param readOnly Whether to use public RPCs for read operations
+ * @returns PublicClient instance
+ */
+export function getPublicClient(
+  chainId?: number,
+  readOnly?: boolean
+): PublicClient {
+  const targetChainId = chainId || getDefaultChain().id
+
+  // Get chain configuration
+  const chain = getChain(targetChainId)
+
+  // Select RPC endpoints
+  let rpcs = chain.rpcUrls.default.http
+  if (readOnly && chain.rpcUrls.public?.http) {
+    rpcs = chain.rpcUrls.public.http
+  }
+
+  // Create new public client with random RPC
+  // @ts-ignore - Chain type compatibility issue with viem
+  return createPublicClient({
+    chain: chain as any,
+    transport: http(pickRpc(rpcs)),
+  })
+}
+
+/**
+ * Get the default public client (Creditcoin Testnet)
+ */
+export function getDefaultPublicClient(): PublicClient {
+  return getPublicClient(getDefaultChain().id)
+}
+
+// Legacy exports for backward compatibility (deprecated)
 export const publicClient = createPublicClient({
-  chain: CHAIN_DEFAULT,
+  chain: creditcoinTestnet,
   transport: http(),
 })
 
-// Create WebSocket client for real-time updates
 export const wsClient = createPublicClient({
-  chain: CHAIN_DEFAULT,
+  chain: creditcoinTestnet,
   transport: webSocket(),
 })
 
-// Helper function to create wallet client
-export const createEVMWalletClient = (account: any) => {
+/**
+ * Helper function to create chain-specific wallet client
+ * @param account Wallet account
+ * @param chainId EVM chain id
+ * @returns WalletClient instance
+ */
+export const createEVMWalletClient = (account: any, chainId: number) => {
+  const chain = getChain(chainId)
+  // @ts-ignore - Chain type compatibility issue with viem
   return createWalletClient({
-    account,
-    chain: CHAIN_DEFAULT,
+    account: account || undefined,
+    chain: chain as any,
     transport: http(),
   })
 }
@@ -110,17 +227,4 @@ export const formatCTC = (wei: bigint) => {
 // Helper function to convert CTC to wei
 export const parseCTC = (ctc: number) => {
   return BigInt(Math.floor(ctc * 10 ** 18))
-}
-
-// Export all configuration
-export const EVM_CONFIG = {
-  CHAIN_ID: CHAIN_DEFAULT.id,
-  CHAIN_NAME: CHAIN_DEFAULT.name,
-  EXPLORER_URL: CHAIN_DEFAULT.blockExplorers.default.url,
-  CONTRACT_ADDRESS: CHAIN_DEFAULT.custom.moneypot.address as `0x${string}`,
-  USDC_TOKEN_ADDRESS: CHAIN_DEFAULT.custom.moneypot.token
-    .address as `0x${string}`,
-  WALLETCONNECT_PROJECT_ID,
-  NATIVE_CURRENCY: CHAIN_DEFAULT.nativeCurrency,
-  USDC_TOKEN: CHAIN_DEFAULT.custom.moneypot.token,
 }
