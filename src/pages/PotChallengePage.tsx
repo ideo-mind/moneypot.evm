@@ -30,7 +30,6 @@ type KeyState = "unchecked" | "validating" | "valid" | "invalid";
 export function PotChallengePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { connected, signAndSubmitTransaction, account, network } = useWallet();
   const { walletState } = useWallet();
   const { currentChain } = useChainSwitch();
   const { showCustomToast, showSuccessToast, showErrorToast, showPendingToast } = useBlockscoutTx();
@@ -229,7 +228,7 @@ export function PotChallengePage() {
     });
     
     try {
-      await handleEVMAttemptPot(toastId, txId);
+      await handleEVMAttemptPot(txId);
     } catch (error) {
       // Update transaction as failed
       updateTransaction(txId, { 
@@ -242,7 +241,7 @@ export function PotChallengePage() {
     }
   };
 
-  const handleEVMAttemptPot = async (toastId: string, txId: string) => {
+  const handleEVMAttemptPot = async (txId: string) => {
     // Attempt pot using network adapter
     const result = await adapter.client.attemptPot({
       potId: pot!.id,
@@ -520,6 +519,18 @@ export function PotChallengePage() {
             <CardDescription>Optionally enter the 1FA private key for this pot, or proceed without it.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Display 1FA Address */}
+            {pot.one_fa_address && (
+              <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+                <Label className="text-sm font-semibold mb-2 block">1FA Address (for reference)</Label>
+                <p className="font-mono text-xs break-all text-slate-700 dark:text-slate-300">
+                  {pot.one_fa_address}
+                </p>
+              </div>
+            )}
+            
+            {/* TODO: Make 1FA private key required in future versions */}
+            
             <div className="space-y-2 text-left">
               <Label htmlFor="1fa-key">1FA Private Key (Optional)</Label>
               <div className="relative">
@@ -551,11 +562,11 @@ export function PotChallengePage() {
               ) : (
                 <Button 
                   onClick={handleAttempt} 
-                  disabled={!connected} 
+                  disabled={!walletState.isConnected} 
                   size="lg" 
                   className="w-full max-w-xs mx-auto bg-brand-green hover:bg-brand-green/90 text-white font-bold text-lg h-16"
                 >
-                  {connected ? `Pay ${pot.entryFee} USD & Start` : "Connect Wallet to Start"}
+                  {walletState.isConnected ? `Pay ${pot.entryFee} USD & Start` : "Connect Wallet to Start"}
                 </Button>
               )}
               

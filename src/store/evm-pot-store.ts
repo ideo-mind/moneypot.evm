@@ -163,9 +163,14 @@ export const useEVMPotStore = create<EVMPotState>((set, get) => ({
       if (shouldRefresh) {
         console.log("EVM Pot Store: Fetching active pots from EVM contract...")
         // Fetch active pot IDs from EVM contract
-        const activePotIds = await evmContractService.getActivePots()
+        const activePotIds = (
+          await evmContractService.getActivePots()
+        ).reverse()
 
-        console.log("EVM Pot Store: Got active pot IDs:", activePotIds)
+        console.log(
+          "EVM Pot Store: Got active pot IDs (reversed):",
+          activePotIds
+        )
 
         // Update metadata with pot IDs
         metadata = {

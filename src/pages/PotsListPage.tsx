@@ -54,7 +54,7 @@ export function PotsListPage() {
           )}
         </div>
         <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
-          Browse all available treasure hunts, active pots first, then newest first. May the sharpest mind win.
+          Browse all available treasure hunts, newest first. May the sharpest mind win.
         </p>
         {!walletState?.type && (
           <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
