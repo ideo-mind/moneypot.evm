@@ -3,6 +3,7 @@ import { Pot, Attempt } from "@/types"
 import { evmContractService } from "@/lib/evm-api"
 import { formatDistanceToNowStrict } from "date-fns"
 import { MoneyPotData } from "@/abis/evm/money-pot"
+import { formatTokenAmount } from "@/config/viem"
 
 const EVM_ATTEMPTS_STORAGE_KEY = "evm-money-pot-attempts"
 const EVM_POTS_STORAGE_KEY = "evm-money-pot-pots"
@@ -39,15 +40,18 @@ interface EVMPotState {
 }
 
 // Transform EVM MoneyPotData to UI Pot format
-export const transformEVMPotToPot = (evmPot: MoneyPotData): Pot => {
+export const transformEVMPotToPot = (
+  evmPot: MoneyPotData,
+  chainId: number
+): Pot => {
   // Handle missing or undefined values with defaults
   const totalAmount = evmPot.totalAmount || BigInt(0)
   const fee = evmPot.fee || BigInt(0)
   const attemptsCount = evmPot.attemptsCount || BigInt(0)
   const createdAt = evmPot.createdAt || BigInt(0)
 
-  const totalValue = Number(totalAmount) / 1_000_000 // PYUSD has 6 decimals
-  const entryFee = Number(fee) / 1_000_000
+  const totalValue = formatTokenAmount(totalAmount, chainId)
+  const entryFee = formatTokenAmount(fee, chainId)
   const potentialReward = totalValue * 0.4
 
   let expiresAt: Date
@@ -188,7 +192,10 @@ export const useEVMPotStore = create<EVMPotState>((set, get) => ({
             try {
               const evmPot = await evmContractService.getPot(potId)
               if (evmPot) {
-                const pot = transformEVMPotToPot(evmPot)
+                const pot = transformEVMPotToPot(
+                  evmPot,
+                  evmContractService.currentChainId
+                )
                 transformedPots.push(pot)
               }
             } catch (error) {
@@ -279,7 +286,10 @@ export const useEVMPotStore = create<EVMPotState>((set, get) => ({
     try {
       const evmPot = await evmContractService.getPot(id)
       if (evmPot) {
-        const pot = transformEVMPotToPot(evmPot)
+        const pot = transformEVMPotToPot(
+          evmPot,
+          evmContractService.currentChainId
+        )
 
         set((state) => ({
           pots: { ...state.pots, [pot.id]: pot },

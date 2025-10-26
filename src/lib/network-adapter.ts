@@ -7,6 +7,7 @@ import {
   EVMVerifierServiceClient,
 } from "@/lib/evm-verifier-api"
 import { getConnectedWallet } from "@/lib/web3onboard"
+import { parseTokenAmount } from "@/config/viem"
 
 export interface CreatePotParams {
   amount: number
@@ -93,8 +94,9 @@ class NetworkAdapter {
 
 class EVMClient implements NetworkClient {
   async createPot(params: CreatePotParams): Promise<string> {
-    const amount = BigInt(Math.floor(params.amount * 10 ** 6))
-    const fee = BigInt(Math.floor(params.fee * 10 ** 6))
+    const chainId = evmContractService.currentChainId
+    const amount = parseTokenAmount(params.amount, chainId)
+    const fee = parseTokenAmount(params.fee, chainId)
     const durationSeconds = BigInt(params.duration * 60 * 60)
 
     // Step 1: Create pot on blockchain with creator's address as placeholder 1FA

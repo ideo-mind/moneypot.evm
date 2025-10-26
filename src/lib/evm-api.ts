@@ -5,6 +5,8 @@ import {
   formatETH,
   getChain,
   getPublicClient,
+  parseTokenAmount,
+  formatTokenAmount,
 } from "@/config/viem"
 import {
   contractFunctions,
@@ -238,7 +240,7 @@ class EVMContractService {
         args: [address],
       })
 
-      return Number(result) / 10 ** 6 // PYUSD has 6 decimals
+      return formatTokenAmount(result as bigint, this.currentChainId)
     } catch (error) {
       console.error("Failed to get balance:", error)
       return 0
@@ -448,9 +450,12 @@ class EVMContractService {
       attempts_count: potData.attemptsCount.toString(),
       one_fa_address: potData.oneFaAddress,
       title: `Pot #${potData.id}`,
-      totalValue: Number(potData.totalAmount) / 10 ** 6,
-      entryFee: Number(potData.fee) / 10 ** 6,
-      potentialReward: Number(potData.totalAmount) / 10 ** 6,
+      totalValue: formatTokenAmount(potData.totalAmount, this.currentChainId),
+      entryFee: formatTokenAmount(potData.fee, this.currentChainId),
+      potentialReward: formatTokenAmount(
+        potData.totalAmount,
+        this.currentChainId
+      ),
       timeLeft,
       isExpired,
       creatorAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${potData.creator}`,

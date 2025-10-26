@@ -13,6 +13,8 @@ import {
   Chain,
   PublicClient,
   erc20Abi,
+  parseUnits,
+  formatUnits,
 } from "viem"
 
 // Export Chain type for use in other config files
@@ -228,4 +230,28 @@ export const formatETH = (wei: bigint) => {
 // Helper function to convert ETH to wei
 export const parseETH = (eth: number) => {
   return BigInt(Math.floor(eth * 10 ** 18))
+}
+
+/**
+ * Parse token amount to bigint using token decimals from chain config
+ * @param amount Token amount as number
+ * @param chainId EVM chain id
+ * @returns bigint value with proper decimals
+ */
+export const parseTokenAmount = (amount: number, chainId: number): bigint => {
+  const chain = getChain(chainId)
+  const decimals = chain.custom.moneypot.token.decimals
+  return parseUnits(amount.toString(), decimals)
+}
+
+/**
+ * Format token amount from bigint to number using token decimals from chain config
+ * @param amount Token amount as bigint
+ * @param chainId EVM chain id
+ * @returns number value with proper decimals
+ */
+export const formatTokenAmount = (amount: bigint, chainId: number): number => {
+  const chain = getChain(chainId)
+  const decimals = chain.custom.moneypot.token.decimals
+  return Number(formatUnits(amount, decimals))
 }
