@@ -1,6 +1,6 @@
 // MoneyPot contract ABI - inline definition to avoid import issues
 import { abi } from "@abis/MoneyPot.json"
-import { INFURA_API_KEY } from "./index"
+import { ALCHEMY_API_KEY, INFURA_API_KEY } from "./index"
 
 export const moneyPotABI = abi
 
