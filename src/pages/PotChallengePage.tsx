@@ -243,15 +243,9 @@ export function PotChallengePage() {
 
   const handleEVMAttemptPot = async (txId: string) => {
     // Attempt pot using network adapter
-    const result = await adapter.client.attemptPot({
+    const attemptId = await adapter.client.attemptPot({
       potId: pot!.id,
     });
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to attempt EVM pot');
-    }
-
-    const attemptId = result.data;
     
     // Update transaction with hash (we'll need to get this from the contract service)
     updateTransaction(txId, { hash: attemptId }); // Using attemptId as hash for now
