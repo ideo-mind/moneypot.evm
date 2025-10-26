@@ -97,7 +97,7 @@ class EVMClient implements NetworkClient {
     const chainId = evmContractService.currentChainId
     const amount = parseTokenAmount(params.amount, chainId)
     const fee = parseTokenAmount(params.fee, chainId)
-    const durationSeconds = BigInt(params.duration * 60 * 60)
+    const durationSeconds = BigInt(params.duration) // duration is already in seconds
 
     // Step 1: Create pot on blockchain with creator's address as placeholder 1FA
     const wallet = getConnectedWallet()

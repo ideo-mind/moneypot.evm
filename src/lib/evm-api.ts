@@ -101,6 +101,51 @@ class EVMContractService {
     return this.walletClient
   }
 
+  // Check and approve token spending if needed
+  async ensureTokenApproval(amount: bigint): Promise<void> {
+    const walletClient = this.getWalletClient()
+    const publicClient = this.getPublicClient()
+    const chainConfig = this.getChainConfig()
+
+    if (!chainConfig) {
+      throw new Error(
+        `Chain configuration not found for chain ID: ${this.currentChainId}`
+      )
+    }
+
+    try {
+      // Get wallet address
+      const account = walletClient.account.address
+
+      // Check current allowance
+      const allowance = await publicClient.readContract({
+        address: chainConfig.tokenAddress as Address,
+        abi: erc20Abi,
+        functionName: "allowance",
+        args: [account, chainConfig.contractAddress],
+      })
+
+      // If allowance is insufficient, approve
+      if (allowance < amount) {
+        console.log("Insufficient allowance, approving tokens...")
+
+        const approveHash = await walletClient.writeContract({
+          address: chainConfig.tokenAddress as Address,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [chainConfig.contractAddress, amount],
+        })
+
+        // Wait for approval confirmation
+        await publicClient.waitForTransactionReceipt({ hash: approveHash })
+        console.log("Token approval completed")
+      }
+    } catch (error) {
+      console.error("Failed to approve token spending:", error)
+      throw error
+    }
+  }
+
   // Create a new pot
   async createPot(params: CreatePotParams): Promise<string> {
     const walletClient = this.getWalletClient()
@@ -114,6 +159,10 @@ class EVMContractService {
     }
 
     try {
+      // First, ensure token approval
+      await this.ensureTokenApproval(params.amount)
+
+      // Now create the pot
       const hash = await walletClient.writeContract({
         address: chainConfig.contractAddress as Address,
         abi: contractFunctions.createPot.abi,
@@ -163,6 +212,15 @@ class EVMContractService {
     }
 
     try {
+      // Get the pot to find the entry fee
+      const potData = await this.getPot(params.potId.toString())
+      if (!potData) {
+        throw new Error("Pot not found")
+      }
+
+      // Ensure token approval for the entry fee
+      await this.ensureTokenApproval(potData.fee)
+
       const hash = await walletClient.writeContract({
         address: chainConfig.contractAddress as Address,
         abi: contractFunctions.attemptPot.abi,
