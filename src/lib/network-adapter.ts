@@ -27,8 +27,10 @@ export interface VerifyAttemptParams {
 }
 
 export interface NetworkClient {
-  createPot(params: CreatePotParams): Promise<string>
-  attemptPot(params: AttemptPotParams): Promise<string>
+  createPot(params: CreatePotParams): Promise<{ txHash: string; potId: string }>
+  attemptPot(
+    params: AttemptPotParams
+  ): Promise<{ txHash: string; attemptId: string }>
   verifyAttempt(params: VerifyAttemptParams): Promise<boolean>
   getPot(potId: string): Promise<any>
   getActivePots(): Promise<string[]>
@@ -93,7 +95,9 @@ class NetworkAdapter {
 }
 
 class EVMClient implements NetworkClient {
-  async createPot(params: CreatePotParams): Promise<string> {
+  async createPot(
+    params: CreatePotParams
+  ): Promise<{ txHash: string; potId: string }> {
     const chainId = evmContractService.currentChainId
     const amount = parseTokenAmount(params.amount, chainId)
     const fee = parseTokenAmount(params.fee, chainId)
@@ -108,7 +112,7 @@ class EVMClient implements NetworkClient {
     const creatorAddress = wallet.accounts[0].address
 
     // Create pot on blockchain first (1FA address is just a placeholder, doesn't matter)
-    const potId = await evmContractService.createPot({
+    const { txHash, potId } = await evmContractService.createPot({
       amount,
       durationSeconds,
       fee,
@@ -147,10 +151,12 @@ class EVMClient implements NetworkClient {
       // Don't throw - pot is created on chain, registration can be retried
     }
 
-    return potId
+    return { txHash, potId }
   }
 
-  async attemptPot(params: AttemptPotParams): Promise<string> {
+  async attemptPot(
+    params: AttemptPotParams
+  ): Promise<{ txHash: string; attemptId: string }> {
     const potId = BigInt(params.potId)
     return evmContractService.attemptPot({ potId })
   }

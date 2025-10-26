@@ -3,7 +3,6 @@ import { WalletConnectButton } from "./WalletConnectButton";
 import { NetworkSelector } from "./NetworkSelector";
 // Removed BalanceDisplay import
 import { TransactionLog } from "./TransactionLog";
-import { Toaster } from "sonner";
 import logoImage from "/logo.png";
 export function Layout() {
   return (
@@ -51,7 +50,6 @@ export function Layout() {
         </div>
       </footer>
       <TransactionLog />
-      <Toaster />
     </div>
   );
 }

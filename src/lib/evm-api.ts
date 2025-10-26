@@ -188,7 +188,9 @@ class EVMContractService {
   }
 
   // Create a new pot
-  async createPot(params: CreatePotParams): Promise<string> {
+  async createPot(
+    params: CreatePotParams
+  ): Promise<{ txHash: string; potId: string }> {
     const walletClient = this.getWalletClient()
     const publicClient = this.getPublicClient(false) // Use default RPC for writes
     const chainConfig = this.getChainConfig()
@@ -234,7 +236,7 @@ class EVMContractService {
             if (decodedEvent.eventName === "PotCreated") {
               const potId = decodedEvent.args.id
               console.log("✅ Pot created with ID:", potId.toString())
-              return potId.toString()
+              return { txHash: hash, potId: potId.toString() }
             }
           } catch (e) {
             // Not our event (e.g., Transfer events from ERC20), continue silently
@@ -253,7 +255,9 @@ class EVMContractService {
   }
 
   // Attempt to solve a pot (returns attempt ID)
-  async attemptPot(params: AttemptPotParams): Promise<string> {
+  async attemptPot(
+    params: AttemptPotParams
+  ): Promise<{ txHash: string; attemptId: string }> {
     const walletClient = this.getWalletClient()
     const publicClient = this.getPublicClient(false) // Use default RPC for writes
     const chainConfig = this.getChainConfig()
@@ -311,7 +315,7 @@ class EVMContractService {
             if (decodedEvent.eventName === "PotAttempted") {
               const attemptId = (decodedEvent.args as any).attemptId
               console.log("✅ Attempt created with ID:", attemptId.toString())
-              return attemptId.toString()
+              return { txHash: hash, attemptId: attemptId.toString() }
             }
           } catch (e) {
             // Not our event, continue silently

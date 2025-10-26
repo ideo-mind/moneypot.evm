@@ -10,7 +10,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Wand2, Loader2, Terminal, Eye, EyeOff, Shuffle, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { Toaster } from "sonner";
 import { useBlockscoutTx } from "@/hooks/use-blockscout-tx";
 import { BlockscoutBalance } from "@/components/BlockscoutBalance";
 
@@ -46,7 +45,7 @@ export function CreatePotPage() {
   
   const { walletState } = useWallet();
   const { adapter } = useNetworkAdapter();
-  const { showCustomToast, showSuccessToast, showErrorToast, showPendingToast } = useBlockscoutTx();
+  const { showCustomToast, showSuccessToast, showErrorToast, showPendingToast, showTransactionToast } = useBlockscoutTx();
   // Removed Aptos store references
   const addEVMPot = useEVMPotStore((state) => state.addPot);
   // Removed Aptos store references
@@ -239,7 +238,6 @@ export function CreatePotPage() {
     }
     
     setIsSubmitting(true);
-    showPendingToast("Creating Money Pot", `Submitting transaction to blockchain...`, "");
     
     // Add transaction to log
     const txId = addTransaction({
@@ -273,7 +271,7 @@ export function CreatePotPage() {
 
   const handleEVMCreatePot = async (finalOneFaAddress: string, txId: string) => {
     // Create pot using network adapter
-    const potId = await adapter.client.createPot({
+    const { txHash, potId } = await adapter.client.createPot({
       amount,
       duration: getDurationInSeconds(),
       fee: entryFee,
@@ -281,8 +279,15 @@ export function CreatePotPage() {
       colorMap,
     });
     
-    // Update transaction with hash (we'll need to get this from the contract service)
-    updateTransaction(txId, { hash: potId }); // Using potId as hash for now
+    // Update transaction with real blockchain transaction hash
+    updateTransaction(txId, { hash: txHash, potId });
+    
+    // Show Blockscout transaction toast with real tx hash
+    showTransactionToast(txHash, {
+      type: 'create_pot',
+      amount: `${amount} USD`,
+      potId,
+    });
     
     // Registration with verifier service is already handled by adapter.client.createPot()
     
@@ -312,7 +317,6 @@ export function CreatePotPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
-      <Toaster richColors position="top-right" />
       <div className="space-y-8">
         <div className="text-center">
           <h1 className="text-4xl md:text-5xl font-display font-bold">Create a New Money Pot</h1>

@@ -6,7 +6,7 @@ import { useNetworkAdapter } from "@/lib/network-adapter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Loader2, PartyPopper, ShieldClose, SkipForward, CheckCircle2, XCircle, KeyRound, Zap, Target } from "lucide-react";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
 import { useBlockscoutTx } from "@/hooks/use-blockscout-tx";
 import { BlockscoutBalance } from "@/components/BlockscoutBalance";
 import { useChainSwitch } from "@/hooks/use-chain-switch";
@@ -32,7 +32,7 @@ export function PotChallengePage() {
   const navigate = useNavigate();
   const { walletState } = useWallet();
   const { currentChain } = useChainSwitch();
-  const { showCustomToast, showSuccessToast, showErrorToast, showPendingToast } = useBlockscoutTx();
+  const { showCustomToast, showSuccessToast, showErrorToast, showPendingToast, showTransactionToast } = useBlockscoutTx();
   const { adapter } = useNetworkAdapter();
   
   // EVM store
@@ -216,7 +216,6 @@ export function PotChallengePage() {
     // 1FA private key is now optional - allow attempts without it
     // if (keyState !== 'valid') return;
     setGameState("paying");
-    showPendingToast("Submitting Entry Fee", `Submitting entry fee transaction on ${currentData.networkName}...`, "");
     
     // Add transaction to log
     const txId = addTransaction({
@@ -244,12 +243,18 @@ export function PotChallengePage() {
 
   const handleEVMAttemptPot = async (txId: string) => {
     // Attempt pot using network adapter
-    const attemptId = await adapter.client.attemptPot({
+    const { txHash, attemptId } = await adapter.client.attemptPot({
       potId: pot!.id,
     });
     
-    // Update transaction with hash (we'll need to get this from the contract service)
-    updateTransaction(txId, { hash: attemptId }); // Using attemptId as hash for now
+    // Update transaction with real blockchain transaction hash
+    updateTransaction(txId, { hash: txHash, potId: pot!.id });
+    
+    // Show Blockscout transaction toast with real tx hash
+    showTransactionToast(txHash, {
+      type: 'attempt_pot',
+      potId: pot!.id,
+    });
     
     // Store attempt_id for later use in verification
     setAttemptId(attemptId);
@@ -511,7 +516,6 @@ export function PotChallengePage() {
 
   return (
     <div className="max-w-5xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
-      <Toaster richColors position="top-right" />
       <div className="text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-display font-bold">{pot.title}</h1>
         <div className="mt-4 flex items-center justify-center gap-6 text-sm text-muted-foreground">
