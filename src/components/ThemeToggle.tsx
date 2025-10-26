@@ -5,7 +5,7 @@ interface ThemeToggleProps {
   className?: string;
 }
 
-export function ThemeToggle({ className = "absolute top-4 right-4" }: ThemeToggleProps) {
+export function ThemeToggle({ className = "" }: ThemeToggleProps) {
   const { isDark, toggleTheme } = useTheme();
 
   return (
@@ -13,9 +13,11 @@ export function ThemeToggle({ className = "absolute top-4 right-4" }: ThemeToggl
       onClick={toggleTheme} 
       variant="ghost"
       size="icon"
-      className={`${className} text-2xl hover:scale-110 hover:rotate-12 transition-all duration-200 active:scale-90 z-50`}
+      className={`${className} hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200`}
     >
-      {isDark ? '☀️' : '🌙'}
+      <span className="text-xl hover:scale-110 transition-transform">
+        {isDark ? '☀️' : '🌙'}
+      </span>
     </Button>
   );
 }

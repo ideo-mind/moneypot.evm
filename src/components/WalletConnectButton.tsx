@@ -10,10 +10,11 @@ import {
 import { formatETH, publicClient } from '@/config/viem';
 import { evmContractService } from '@/lib/evm-api';
 import { getConnectedWallet, switchNetwork, addNetwork } from '@/lib/web3onboard';
-import { AlertTriangle, ChevronDown, Coins, Copy, LogOut, Wallet, Wifi } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Coins, Copy, LogOut, Moon, Sun, Wallet, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useWallet } from './WalletProvider';
 import { useChainSwitch } from '@/hooks/use-chain-switch';
+import { useTheme } from '@/hooks/use-theme';
 
 interface WalletBalances {
   usdc: number | null;
@@ -24,6 +25,7 @@ interface WalletBalances {
 export function WalletConnectButton() {
   const { walletState, connectEVM, disconnect } = useWallet();
   const { currentChain } = useChainSwitch();
+  const { isDark, toggleTheme } = useTheme();
   const [balances, setBalances] = useState<WalletBalances>({
     usdc: null,
     eth: null,
@@ -245,6 +247,23 @@ export function WalletConnectButton() {
               )}
             </div>
           </DropdownMenuLabel>
+
+          <DropdownMenuSeparator />
+
+          {/* Theme Toggle */}
+          <DropdownMenuItem onClick={toggleTheme} className="flex items-center gap-2 cursor-pointer">
+            {isDark ? (
+              <>
+                <Sun className="w-4 h-4" />
+                <span>Light Mode</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-4 h-4" />
+                <span>Dark Mode</span>
+              </>
+            )}
+          </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
