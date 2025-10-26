@@ -35,8 +35,8 @@ export const sepolia = defineChain({
       http: [
         // "https://ethereum-sepolia-rpc.publicnode.com",
         // "https://rpc.sepolia.org",
-        "https://sepolia.gateway.tenderly.co",
-        "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
+        // "https://sepolia.gateway.tenderly.co",
+        "https://sepolia.infura.io/v/3" + INFURA_API_KEY,
         // "https://11155111.rpc.hypersync.xyz", //FIXME: hypersync rpc is not workign
         // "https://sepolia.rpc.hypersync.xyz",
       ],
@@ -44,9 +44,8 @@ export const sepolia = defineChain({
     public: {
       http: [
         "https://ethereum-sepolia-rpc.publicnode.com",
-        "https://rpc.sepolia.org",
+        // "https://rpc.sepolia.org",
         "https://sepolia.gateway.tenderly.co",
-        "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
       ],
     },
   },

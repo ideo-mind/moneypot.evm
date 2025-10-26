@@ -15,7 +15,7 @@ import {
   CreatePotParams,
   AttemptPotParams,
 } from "@/abis/evm/money-pot"
-import { Address } from "viem"
+import { Address, erc20Abi } from "viem"
 
 export interface EVMPot {
   id: string
@@ -230,10 +230,11 @@ class EVMContractService {
         )
       }
 
+      // Use ERC20 balanceOf function instead of custom getBalance
       const result = await publicClient.readContract({
         address: chainConfig.tokenAddress as Address,
-        abi: contractFunctions.getBalance.abi,
-        functionName: contractFunctions.getBalance.functionName,
+        abi: erc20Abi,
+        functionName: "balanceOf",
         args: [address],
       })
 

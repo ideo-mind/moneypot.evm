@@ -6,3 +6,6 @@ export const VERIFIER_API_URL =
 
 export const WALLETCONNECT_PROJECT_ID =
   import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || "WalletConnect Project ID"
+
+export const INFURA_API_KEY: string =
+  (import.meta.env.VITE_INFURA_API_KEY as string) || "INFURA_API_KEY"
