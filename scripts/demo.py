@@ -23,8 +23,28 @@ import time
 load_dotenv()
 
 # Configuration
-MONEY_AUTH_URL = os.getenv("MONEY_AUTH_URL", "http://localhost:8787")
-CHAIN_ID = int(os.getenv("CHAIN_ID", "102031"))  # Creditcoin Testnet
+MONEY_AUTH_URL = os.getenv("MONEY_AUTH_URL", "https://auth.money-pot.unreal.art")
+CHAIN_ID = int(os.getenv("CHAIN_ID", "102031"))  # Testnet chain ID
+
+
+
+# Helper function to convert float values to wei (smallest unit)
+def parse_token_amount(value: str, decimals: int = 6) -> int:
+    try:
+        # Try to parse as float first (e.g., "0.1", "100.5", "1e3")
+        float_value = float(value)
+        # Convert to wei: multiply by 10^decimals
+        return int(float_value * (10 ** decimals))
+    except ValueError:
+        # If float parsing fails, try as integer (already in wei)
+        return int(value)
+
+# Parse amounts from environment with proper conversion
+# Default values: 0.1 tokens = 100000000000000000 wei, 0.01 tokens = 10000000000000000 wei
+ONEP_PASSWORD = os.getenv("1P_PASSWORD", "🔥")
+POT_AMOUNT = parse_token_amount(os.getenv("POT_AMOUNT", "1"))
+ENTRY_FEE = parse_token_amount(os.getenv("ENTRY_FEE", "0.1"))
+DURATION = int(os.getenv("DURATION", "3600")) #1 hour 
 
 # Dynamic configuration (will be fetched from /chains endpoint)
 EVM_RPC_URL = None
@@ -49,6 +69,30 @@ def load_money_pot_abi():
         raise RuntimeError("abi not found")
 # Load the real ABI
 MONEY_POT_ABI = load_money_pot_abi()
+
+# Minimal ERC20 ABI for approval operations
+ERC20_ABI = [
+    {
+        "constant": False,
+        "inputs": [
+            {"name": "_spender", "type": "address"},
+            {"name": "_value", "type": "uint256"}
+        ],
+        "name": "approve",
+        "outputs": [{"name": "", "type": "bool"}],
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [
+            {"name": "_owner", "type": "address"},
+            {"name": "_spender", "type": "address"}
+        ],
+        "name": "allowance",
+        "outputs": [{"name": "", "type": "uint256"}],
+        "type": "function"
+    }
+]
 
 
 def load_creator_account_from_env() -> Account:
@@ -283,14 +327,28 @@ class EVMVerifierServiceClient:
         ) as response:
             return await response.json()
     
-    async def authenticate_options(self, attempt_id: str, signature: str) -> Dict[str, Any]:
+    async def authenticate_options(self, attempt_id: str, hunter_account) -> Dict[str, Any]:
         """Get authentication challenges"""
-        # Format request to match server expectations (not using wallet auth middleware)
+        from eth_account.messages import encode_defunct
+        
+        # Create signature for wallet authentication
+        # Sign the attempt_id directly
+        message = encode_defunct(text=attempt_id)
+        signature = hunter_account.sign_message(message)
+        signature_hex = '0x' + signature.signature.hex() if hasattr(signature.signature, 'hex') else '0x' + str(signature.signature)
+        
+        # Create wallet payload
+        wallet_payload = {
+            "attempt_id": attempt_id,
+            "chain_id": CHAIN_ID
+        }
+        # Convert to JSON for sending
+        wallet_payload_json = json.dumps(wallet_payload)
+        
+        # Format request to match wallet auth middleware expectations
         request_payload = {
-            "payload": {
-                "attempt_id": attempt_id,
-                "signature": signature
-            }
+            "encrypted_payload": wallet_payload_json.encode('utf-8').hex(),
+            "signature": signature_hex
         }
 
         async with self.session.post(
@@ -362,6 +420,14 @@ class EVMMoneyPotApp:
         self.password = None
         self.legend = None
     
+    def format_token_amount(self, amount_wei: int) -> str:
+        """Format wei amount to human-readable token amount"""
+        token_amount = amount_wei / (10 ** 18)
+        if token_amount >= 1:
+            return f"{token_amount:.6f}"
+        else:
+            return f"{token_amount:.18f}".rstrip('0').rstrip('.')
+    
     async def initialize(self):
         """Initialize the application"""
         print("🚀 Initializing EVM Money Pot Application...")
@@ -419,7 +485,7 @@ class EVMMoneyPotApp:
             creator_native_balance_eth = self.w3.from_wei(creator_native_balance, 'ether')
             
             print(f"✅ Contract: {contract_name} ({contract_symbol})")
-            print(f"✅ Creator Balance: {creator_balance:,} {contract_symbol}")
+            print(f"✅ Creator Balance: {self.format_token_amount(creator_balance)} {contract_symbol} ({creator_balance:,} units)")
             print(f"✅ Creator Native: {creator_native_balance_eth} CTC")
                 
         except Exception as e:
@@ -436,7 +502,7 @@ class EVMMoneyPotApp:
             self.directions = register_options.get('directions', {})
 
             # Set default password and create legend mapping
-            self.password = "A"  # Default password
+            self.password = ONEP_PASSWORD  # Default password
             self.legend = {
                 "red": self.directions.get("up", "U"),
                 "green": self.directions.get("down", "D"),
@@ -448,14 +514,92 @@ class EVMMoneyPotApp:
         
         print("=" * 50)
     
-    async def create_pot_flow(self, amount: int = 1000, duration_seconds: int = 360, fee: int = 100):
-        """Complete pot creation and registration flow"""
+    def get_underlying_token_contract(self):
+        """Get the underlying ERC20 token contract"""
+        token_address = self.contract.functions.getTokenAddress().call()
+        return self.w3.eth.contract(
+            address=Web3.to_checksum_address(token_address),
+            abi=ERC20_ABI
+        )
+    
+    async def approve_token_spending(self, account: Account, amount: int, purpose: str):
+        """Approve MoneyPot contract to spend tokens"""
+        print(f"\n💰 Approving token spending for {purpose}")
+        
+        # Get underlying token contract
+        token_contract = self.get_underlying_token_contract()
+        token_address = token_contract.address
+        
+        # Check current allowance
+        current_allowance = token_contract.functions.allowance(
+            account.address,
+            self.contract.address
+        ).call()
+        
+        print(f"   Current allowance: {self.format_token_amount(current_allowance)} tokens ({current_allowance:,} units)")
+        print(f"   Required amount: {self.format_token_amount(amount)} tokens ({amount:,} units)")
+        
+        if current_allowance >= amount:
+            print(f"✅ Sufficient allowance already exists")
+            return
+        
+        # Build approval transaction
+        nonce = self.w3.eth.get_transaction_count(account.address, 'pending')
+        gas_price = self.w3.eth.gas_price
+        
+        approve_tx = token_contract.functions.approve(
+            self.contract.address,
+            amount
+        ).build_transaction({
+            'from': account.address,
+            'gas': 100000,
+            'gasPrice': gas_price,
+            'nonce': nonce,
+            'chainId': CHAIN_ID
+        })
+        
+        # Sign and send
+        signed_tx = self.w3.eth.account.sign_transaction(approve_tx, account.key)
+        tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        print(f"📝 Approval tx: 0x{tx_hash.hex()}")
+        print(f"🔗 Explorer: {EXPLORER_URL}/tx/0x{tx_hash.hex()}")
+        
+        # Wait for confirmation
+        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        print(f"✅ Approval confirmed in block: {receipt.blockNumber}")
+        
+        if receipt.status == 0:
+            raise RuntimeError("Approval transaction failed")
+    
+    async def create_pot_flow(self, amount_wei: int = None, duration_seconds: int = None, fee_wei: int = None):
+        """Complete pot creation and registration flow
+        
+        Args:
+            amount_wei: Amount in wei (smallest unit). Defaults to POT_AMOUNT from env
+            duration_seconds: Pot duration in seconds. Defaults to DURATION from env
+            fee_wei: Entry fee in wei. Defaults to ENTRY_FEE from env
+        """
+        # Use environment defaults if not specified
+        amount_wei = amount_wei if amount_wei is not None else POT_AMOUNT
+        fee_wei = fee_wei if fee_wei is not None else ENTRY_FEE
+        duration_seconds = duration_seconds if duration_seconds is not None else DURATION
+        
         print("\n📦 Creating EVM Money Pot")
         print("-" * 30)
+        print(f"💰 Pot Amount: {self.format_token_amount(amount_wei)} tokens ({amount_wei} wei)")
+        print(f"💸 Entry Fee: {self.format_token_amount(fee_wei)} tokens ({fee_wei} wei)")
+        print(f"⏱️  Duration: {duration_seconds} seconds ({duration_seconds // 3600}h {duration_seconds % 3600 // 60}m)")
         
         # Get next pot ID to avoid conflicts
         next_pot_id = get_next_pot_id(self.contract)
         print(f"📋 Next pot ID: {next_pot_id}")
+        
+        # Approve token spending for pot creation
+        await self.approve_token_spending(
+            self.creator_account,
+            amount_wei,
+            f"pot creation ({self.format_token_amount(amount_wei)} tokens)"
+        )
         
         # Build transaction with a fresh nonce
         # We'll use 'pending' to include pending transactions when calculating the nonce
@@ -466,9 +610,9 @@ class EVMMoneyPotApp:
         print(f"✅ Using nonce: {nonce} for transaction")
 
         transaction = self.contract.functions.createPot(
-            amount,
+            amount_wei,
             duration_seconds,
-            fee,
+            fee_wei,
             self.hunter_account.address  # Use hunter as 1FA address
         ).build_transaction({
             'from': self.creator_account.address,
@@ -505,7 +649,7 @@ class EVMMoneyPotApp:
         # Get pot info for verification
         pot_info = get_pot_info(self.contract, pot_id)
         if pot_info:
-            print(f"✅ Amount: {pot_info.get('amount')} USDC")
+            print(f"✅ Amount: {pot_info.get('amount')} USD")
         
         # Step 2: Register pot with verifier service
         print("\n🔐 Registering with verifier service...")
@@ -604,6 +748,17 @@ class EVMMoneyPotApp:
     
     async def _request_attempt(self, pot_id: str) -> int:
         """Request an attempt on the blockchain"""
+        # Get pot info to determine fee
+        pot_info = get_pot_info(self.contract, int(pot_id))
+        fee = pot_info.get('fee', 0)
+
+        # Approve token spending for attempt
+        await self.approve_token_spending(
+            self.hunter_account,
+            fee,
+            f"pot attempt (fee: {fee} tokens)"
+        )
+        
         # Build transaction with a fresh nonce
         # Use 'pending' to include pending transactions
         nonce = self.w3.eth.get_transaction_count(self.hunter_account.address, 'pending')
@@ -647,13 +802,14 @@ class EVMMoneyPotApp:
         """Fail an attempt with wrong solutions"""
         async with self.verifier as verifier:
             # Get authentication challenges
-            from eth_account.messages import encode_defunct
-            message = encode_defunct(text=str(attempt_id))
-            signature = self.hunter_account.sign_message(message)
-            signature_hex = '0x' + signature.signature.hex() if hasattr(signature.signature, 'hex') else '0x' + str(signature.signature)
-            
-            auth_options = await verifier.authenticate_options(str(attempt_id), signature_hex)
+            auth_options = await verifier.authenticate_options(str(attempt_id), self.hunter_account)
             print(f"✅ Got {len(auth_options.get('challenges', []))} challenges")
+            
+            # Extract challenge_id from the response
+            challenge_id = auth_options.get('challenge_id')
+            if not challenge_id:
+                raise RuntimeError("No challenge_id returned from authenticate_options")
+            print(f"✅ Challenge ID: {challenge_id}")
             
             # Generate wrong solutions
             challenges = auth_options.get('challenges', [])
@@ -683,7 +839,7 @@ class EVMMoneyPotApp:
             print(f"❌ Wrong solutions: {wrong_solutions}")
             
             # Verify wrong solutions (should fail)
-            verify_result = await verifier.authenticate_verify(wrong_solutions, str(attempt_id), self.hunter_account)
+            verify_result = await verifier.authenticate_verify(wrong_solutions, challenge_id, self.hunter_account)
             
             if 'error' in verify_result or not verify_result.get('success', False):
                 print(f"✅ Intentional failure achieved!")
@@ -694,13 +850,14 @@ class EVMMoneyPotApp:
         """Succeed an attempt with correct solutions"""
         async with self.verifier as verifier:
             # Get authentication challenges
-            from eth_account.messages import encode_defunct
-            message = encode_defunct(text=str(attempt_id))
-            signature = self.hunter_account.sign_message(message)
-            signature_hex = '0x' + signature.signature.hex() if hasattr(signature.signature, 'hex') else '0x' + str(signature.signature)
-            
-            auth_options = await verifier.authenticate_options(str(attempt_id), signature_hex)
+            auth_options = await verifier.authenticate_options(str(attempt_id), self.hunter_account)
             print(f"✅ Got {len(auth_options.get('challenges', []))} challenges")
+            
+            # Extract challenge_id from the response
+            challenge_id = auth_options.get('challenge_id')
+            if not challenge_id:
+                raise RuntimeError("No challenge_id returned from authenticate_options")
+            print(f"✅ Challenge ID: {challenge_id}")
             
             # Generate correct solutions
             challenges = auth_options.get('challenges', [])
@@ -727,12 +884,13 @@ class EVMMoneyPotApp:
             print(f"✅ Correct solutions: {correct_solutions}")
             
             # Verify correct solutions (should succeed)
-            verify_result = await verifier.authenticate_verify(correct_solutions, str(attempt_id), self.hunter_account)
+            verify_result = await verifier.authenticate_verify(correct_solutions, challenge_id, self.hunter_account)
             
             if verify_result.get('success', False):
                 print(f"🎉 SUCCESS! Attempt with correct solutions succeeded!")
             else:
                 print(f"❌ Unexpected failure with correct solutions!")
+                print("Error: ", verify_result)
     
     async def display_contract_info(self):
         """Display contract information and active pots"""
@@ -747,7 +905,7 @@ class EVMMoneyPotApp:
             
             # Get total supply
             total_supply = self.contract.functions.totalSupply().call()
-            print(f"Total Supply: {total_supply:,} {contract_symbol}")
+            print(f"Total Supply: {self.format_token_amount(total_supply)} {contract_symbol} ({total_supply:,} units)")
             
             # Get active pots
             active_pots = get_active_pots(self.contract)
@@ -761,8 +919,8 @@ class EVMMoneyPotApp:
             creator_balance = self.contract.functions.balanceOf(self.creator_account.address).call()
             hunter_balance = self.contract.functions.balanceOf(self.hunter_account.address).call()
             
-            print(f"Creator Balance: {creator_balance:,} {contract_symbol}")
-            print(f"Hunter Balance: {hunter_balance:,} {contract_symbol}")
+            print(f"Creator Balance: {self.format_token_amount(creator_balance)} {contract_symbol} ({creator_balance:,} units)")
+            print(f"Hunter Balance: {self.format_token_amount(hunter_balance)} {contract_symbol} ({hunter_balance:,} units)")
             
             # Display native balances
             creator_native = self.w3.eth.get_balance(self.creator_account.address)
@@ -771,8 +929,8 @@ class EVMMoneyPotApp:
             creator_native_eth = self.w3.from_wei(creator_native, 'ether')
             hunter_native_eth = self.w3.from_wei(hunter_native, 'ether')
             
-            print(f"Creator Native: {creator_native_eth} CTC")
-            print(f"Hunter Native: {hunter_native_eth} CTC")
+            print(f"Creator Native: {creator_native_eth} ETH")
+            print(f"Hunter Native: {hunter_native_eth} ETH")
             
         except Exception as e:
             print(f"⚠️  Could not get contract info: {e}")

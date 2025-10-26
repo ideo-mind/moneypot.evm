@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "") // Loads all env vars, not just VITE_
 
   return {
+    define: {
+      global: "globalThis",
+      "process.env": {},
+    },
     plugins: [
       react(),
       {
@@ -41,6 +45,15 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
         "@abis": path.resolve(__dirname, "./src/abis"),
         "@shared": path.resolve(__dirname, "./shared"),
+        buffer: "buffer",
+      },
+    },
+    optimizeDeps: {
+      include: ["buffer"],
+      esbuildOptions: {
+        define: {
+          global: "globalThis",
+        },
       },
     },
     server: {

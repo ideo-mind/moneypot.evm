@@ -10,6 +10,11 @@
 
 <body>
   <div id="root"></div>
+  <script type="module">
+    import { Buffer } from 'buffer'
+    window.Buffer = Buffer
+    globalThis.Buffer = Buffer
+  </script>
   <script>
     window.addEventListener('error', (event) => {
       const isOurAppError = event.filename && event.filename.startsWith(window.location.origin)

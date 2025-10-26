@@ -7,9 +7,11 @@ import { useWallet } from '@/components/WalletProvider';
 import { evmFaucetService } from '@/lib/evm-faucet';
 import { useBlockscoutTx } from '@/hooks/use-blockscout-tx';
 import { BlockscoutBalance } from '@/components/BlockscoutBalance';
+import { useChainSwitch } from '@/hooks/use-chain-switch';
 
 export function FaucetPage() {
   const { walletState } = useWallet();
+  const { currentChain } = useChainSwitch();
   const { showCustomToast, showSuccessToast, showErrorToast, showPendingToast } = useBlockscoutTx();
   const [isRequesting, setIsRequesting] = useState(false);
   const [lastResult, setLastResult] = useState<any>(null);
@@ -37,7 +39,7 @@ export function FaucetPage() {
       setLastResult(result);
 
       if (result.success) {
-        showSuccessToast('Airdrop Successful!', `Received ${result.message || '200 CTC + USDC'}`, {});
+        showSuccessToast('Airdrop Successful!', `Received ${result.message || '200 CTC + USD'}`, {});
       } else {
         showErrorToast('Airdrop Failed', result.error || 'Unknown error', {});
       }
@@ -57,7 +59,7 @@ export function FaucetPage() {
       <div className="text-center mb-8">
         <h1 className="text-4xl md:text-5xl font-display font-bold">Faucet</h1>
         <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
-          Get test tokens for Creditcoin EVM testnet
+          Get test tokens for {currentChain.name}
         </p>
       </div>
 
@@ -65,7 +67,7 @@ export function FaucetPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Coins className="w-5 h-5" />
-            Creditcoin Testnet Faucet
+            {currentChain.name} Faucet
           </CardTitle>
           <CardDescription>
             Request test tokens to participate in Money Pot games
@@ -116,7 +118,7 @@ export function FaucetPage() {
           ) : walletState.type !== 'evm' ? (
             <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-red-800 dark:text-red-200 text-sm">
-                Airdrop is only available for EVM wallets. Please switch to Creditcoin network.
+                Airdrop is only available for EVM wallets. Please switch to {currentChain.name} network.
               </p>
             </div>
           ) : (
@@ -197,10 +199,39 @@ export function FaucetPage() {
             <h4 className="font-medium mb-2">How it works:</h4>
             <ol className="text-sm text-muted-foreground space-y-1">
               <li>1. Connect an EVM wallet (MetaMask, WalletConnect, etc.)</li>
-              <li>2. Switch to Creditcoin Testnet</li>
+              <li>2. Switch to {currentChain.name}</li>
               <li>3. Click "Request Airdrop" to get test tokens</li>
-              <li>4. Use the tokens to participate in Money Pot games</li>
+              <li>4. Use the tokens to participate in Treasure Pot games</li>
             </ol>
+          </div>
+
+          {/* External Faucets */}
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <h4 className="font-medium mb-3 text-blue-900 dark:text-blue-100">External Faucets</h4>
+            <div className="space-y-3">
+              <div>
+                <h5 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">ETH Faucet</h5>
+                <a 
+                  href={airdropInfo.faucets?.eth?.[0]} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline break-all"
+                >
+                  {airdropInfo.faucets?.eth?.[0]}
+                </a>
+              </div>
+              <div>
+                <h5 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">PYUSD Faucet</h5>
+                <a 
+                  href={airdropInfo.faucets?.pyusd?.[0]} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline break-all"
+                >
+                  {airdropInfo.faucets?.pyusd?.[0]}
+                </a>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

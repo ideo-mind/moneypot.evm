@@ -6,10 +6,12 @@ export interface EVMVerifierResponse {
   success: boolean
   message?: string
   data?: any
+  error?: string
 }
 
 export interface EVMRegisterOptions {
-  public_key: string
+  colors: Record<string, string>
+  directions: Record<string, string>
 }
 
 export interface EVMRegisterPayload {
@@ -19,6 +21,7 @@ export interface EVMRegisterPayload {
   iat: number
   iss: string
   exp: number
+  chain_id: number
 }
 
 export interface EVMAuthenticateOptions {
@@ -27,18 +30,17 @@ export interface EVMAuthenticateOptions {
     type: string
     question: string
     options?: string[]
+    colorGroups?: Record<string, string>
   }>
+  challenge_id: string
   colors?: Record<string, string>
   directions?: Record<string, string>
 }
 
 export interface EVMAuthenticatePayload {
-  solutions: Array<{
-    challenge_id: string
-    answer: string
-  }>
-  attempt_id: string
-  wallet: string
+  solutions: string[]
+  challenge_id: string
+  chain_id: number
 }
 
 class EVMVerifierServiceClient {
@@ -62,7 +64,6 @@ class EVMVerifierServiceClient {
     const url = `${this.baseUrl}${endpoint}`
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      MONEYPOT_CHAIN: this.chainId.toString(),
       ...additionalHeaders,
     }
 
@@ -95,22 +96,25 @@ class EVMVerifierServiceClient {
   }
 
   async registerOptions(): Promise<EVMRegisterOptions> {
-    return this.makeRequest<EVMRegisterOptions>("/evm/register/options", "POST")
+    return this.makeRequest<EVMRegisterOptions>("/evm/register/options", "GET")
   }
 
   async registerVerify(
-    encryptedPayload: string,
-    publicKey: string,
+    payload: EVMRegisterPayload,
     signature: string
   ): Promise<EVMVerifierResponse> {
+    // Format the request to match demo.py pattern
+    const payloadJson = JSON.stringify(payload)
+
+    const requestPayload = {
+      encrypted_payload: Buffer.from(payloadJson, "utf-8").toString("hex"),
+      signature: signature,
+    }
+
     return this.makeRequest<EVMVerifierResponse>(
       "/evm/register/verify",
       "POST",
-      {
-        encrypted_payload: encryptedPayload,
-        public_key: publicKey,
-        signature,
-      }
+      requestPayload
     )
   }
 
@@ -118,29 +122,51 @@ class EVMVerifierServiceClient {
     attemptId: string,
     signature: string
   ): Promise<EVMAuthenticateOptions> {
+    // Create wallet payload matching demo.py pattern
+    const walletPayload = {
+      attempt_id: attemptId,
+      chain_id: this.chainId,
+    }
+
+    const requestPayload = {
+      encrypted_payload: Buffer.from(
+        JSON.stringify(walletPayload),
+        "utf-8"
+      ).toString("hex"),
+      signature: signature,
+    }
+
     return this.makeRequest<EVMAuthenticateOptions>(
       "/evm/authenticate/options",
       "POST",
-      {
-        attempt_id: attemptId,
-        signature,
-      }
+      requestPayload
     )
   }
 
   async authenticateVerify(
-    solutions: Array<{ challenge_id: string; answer: string }>,
-    attemptId: string,
-    wallet: string
+    solutions: string[],
+    challengeId: string,
+    signature: string
   ): Promise<EVMVerifierResponse> {
+    // Create wallet payload matching demo.py pattern
+    const walletPayload = {
+      challenge_id: challengeId,
+      solutions: solutions,
+      chain_id: this.chainId,
+    }
+
+    const requestPayload = {
+      encrypted_payload: Buffer.from(
+        JSON.stringify(walletPayload),
+        "utf-8"
+      ).toString("hex"),
+      signature: signature,
+    }
+
     return this.makeRequest<EVMVerifierResponse>(
       "/evm/authenticate/verify",
       "POST",
-      {
-        solutions,
-        attempt_id: attemptId,
-        wallet,
-      }
+      requestPayload
     )
   }
 
@@ -177,7 +203,7 @@ class EVMVerifierServiceClient {
     }
   }
 
-  // Helper method to encrypt payload (simplified hex encoding for MVP)
+  // Helper method to encrypt payload (simple hex encoding as per demo.py)
   static encryptPayload(payload: any): string {
     try {
       const jsonString = JSON.stringify(payload)
@@ -194,6 +220,7 @@ export { EVMVerifierServiceClient }
 export default EVMVerifierServiceClient
 
 // Helper function to get authentication options with colors and directions
+// Used when attempting pots (not creating them)
 export const getAuthOptions = async (
   attemptId: string,
   walletAddress: string
@@ -204,14 +231,30 @@ export const getAuthOptions = async (
     const wallet = getConnectedWallet()
 
     if (!wallet) {
-      throw new Error("No wallet connected")
+      // Return mock data immediately if no wallet connected
+      console.log("No wallet connected, returning mock auth options")
+      return {
+        challenges: [],
+        challenge_id: "",
+        colors: {
+          red: "#ef4444",
+          green: "#22c55e",
+          blue: "#3b82f6",
+          yellow: "#eab308",
+        },
+        directions: {
+          up: "U",
+          down: "D",
+          left: "L",
+          right: "R",
+        },
+      }
     }
 
-    // Create a signature for authentication
-    const message = JSON.stringify({ attemptId, walletAddress })
+    // Create a signature for authentication (sign attempt_id directly as per demo.py)
     const signature = await EVMVerifierServiceClient.createEVMSignature(
       wallet,
-      message
+      attemptId
     )
 
     // Call the actual API
@@ -226,13 +269,14 @@ export const getAuthOptions = async (
     // Fallback to mock data if API fails
     return {
       challenges: [],
-      colors: CHAIN_DEFAULT.custom.moneypot.colors || {
+      challenge_id: "",
+      colors: {
         red: "#ef4444",
         green: "#22c55e",
         blue: "#3b82f6",
         yellow: "#eab308",
       },
-      directions: CHAIN_DEFAULT.custom.moneypot.directions || {
+      directions: {
         up: "U",
         down: "D",
         left: "L",

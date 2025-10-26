@@ -34,8 +34,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { useWallet } from "@/components/WalletProvider";
 import { useNetworkAdapter } from "@/lib/network-adapter";
-import { evmVerifierService, EVMVerifierServiceClient, getAuthOptions } from "@/lib/evm-verifier-api";
-import { getConnectedWallet } from "@/lib/web3onboard";
+import { evmVerifierService } from "@/lib/evm-verifier-api";
+import { evmContractService } from "@/lib/evm-api";
 const steps = [
   { id: 1, name: "Define Pot" },
   { id: 2, name: "Set Rules" },
@@ -85,20 +85,27 @@ export function CreatePotPage() {
   useEffect(() => {
     const fetchDynamicData = async () => {
       try {
-        // Use a dummy attempt ID to get the dynamic data
-        const authOptions = await getAuthOptions("dummy", "dummy");
-        setDynamicColors(authOptions.colors || {});
-        setDynamicDirections(authOptions.directions || {});
+        // Use register options to get the dynamic data (this is for creating pots)
+        const registerOptions = await evmVerifierService.registerOptions();
         
-        // Extract mappable directions (exclude skip)
-        const directions = Object.values(authOptions.directions || {});
-        setMappableDirections(directions.filter(dir => dir.toLowerCase() !== 'skip'));
+        // Set all colors and directions from backend (including skip)
+        setDynamicColors(registerOptions.colors || {});
+        setDynamicDirections(registerOptions.directions || {});
         
-        // Initialize color map with dynamic colors
+        // Extract only directions that are NOT skip (for mapping colors)
+        const allDirections = Object.entries(registerOptions.directions || {});
+        const mappableDirections = allDirections
+          .filter(([key]) => key.toLowerCase() !== 'skip')
+          .map(([_, value]) => value as string);
+        
+        setMappableDirections(mappableDirections);
+        
+        // Initialize color map: assign first N colors to first N directions (excluding skip)
         const initialColorMap: Record<string, string> = {};
-        Object.keys(authOptions.colors || {}).forEach((color, index) => {
-          if (index < directions.length) {
-            initialColorMap[color] = directions[index];
+        const colorKeys = Object.keys(registerOptions.colors || {});
+        colorKeys.forEach((color, index) => {
+          if (index < mappableDirections.length) {
+            initialColorMap[color] = mappableDirections[index];
           }
         });
         setColorMap(initialColorMap);
@@ -115,8 +122,7 @@ export function CreatePotPage() {
           up: "U",
           down: "D", 
           left: "L",
-          right: "R",
-          skip: "S"
+          right: "R"
         });
         setMappableDirections(["U", "D", "L", "R"]);
       }
@@ -233,15 +239,15 @@ export function CreatePotPage() {
     }
     
     setIsSubmitting(true);
-    showPendingToast("Creating Money Pot", `Submitting transaction to Creditcoin...`, "");
+    showPendingToast("Creating Money Pot", `Submitting transaction to blockchain...`, "");
     
     // Add transaction to log
     const txId = addTransaction({
       hash: '', // Will be updated when we get the response
       type: 'create_pot',
       status: 'pending',
-      description: `Creating pot with ${amount} USDC`,
-      amount: `${amount} USDC`,
+      description: `Creating pot with ${amount} USD`,
+      amount: `${amount} USD`,
     });
     
     try {
@@ -267,78 +273,38 @@ export function CreatePotPage() {
 
   const handleEVMCreatePot = async (finalOneFaAddress: string, txId: string) => {
     // Create pot using network adapter
-    const result = await adapter.client.createPot({
+    const potId = await adapter.client.createPot({
       amount,
       duration: getDurationInSeconds(),
       fee: entryFee,
       password,
       colorMap,
     });
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to create EVM pot');
-    }
-
-    const potId = result.data;
     
     // Update transaction with hash (we'll need to get this from the contract service)
     updateTransaction(txId, { hash: potId }); // Using potId as hash for now
     
-    showPendingToast("Registering Pot", "Registering pot with verifier...", "");
-    
-    // Register with EVM verifier service
-    const timestamp = Math.floor(Date.now() / 1000);
-    const payload = {
-      pot_id: potId,
-      "1p": password,
-      legend: colorMap,
-      iat: timestamp,
-      iss: walletState!.address!,
-      exp: timestamp + 3600, // 1 hour
-    };
-
-    // Get encryption key
-    const { public_key } = await evmVerifierService.registerOptions();
-    
-    // Encrypt payload
-    const encryptedPayload = EVMVerifierServiceClient.encryptPayload(payload);
-    
-    // Create signature using the connected EVM wallet
-    const message = JSON.stringify(payload);
-    const evmWallet = getConnectedWallet();
-    if (!evmWallet) {
-      throw new Error('No EVM wallet connected');
-    }
-    
-    const signature = await EVMVerifierServiceClient.createEVMSignature(evmWallet, message);
-
-    // Register with verifier
-    await evmVerifierService.registerVerify(
-      encryptedPayload,
-      public_key,
-      signature
-    );
+    // Registration with verifier service is already handled by adapter.client.createPot()
     
     // Fetch the created pot from blockchain
     const potData = await adapter.client.getPot(potId);
-    if (!potData.success || !potData.data) {
+    if (!potData) {
       throw new Error('Failed to fetch created pot');
     }
     
-    const newPot = transformEVMPotToPot(potData.data);
+    const newPot = transformEVMPotToPot(potData, evmContractService.currentChainId || 11155111);
     addEVMPot(newPot);
     
-    // Refresh the pots list
-    await fetchEVMPots(true);
+    // Note: fetchEVMPots is not needed here since addEVMPot already updates the store
     
     // Update transaction as successful
     updateTransaction(txId, { 
       status: 'success', 
       potId: potId,
-      description: `Successfully created Pot #${potId} with ${amount} USDC`
+      description: `Successfully created Pot #${potId} with ${amount} USD`
     });
     
-    showSuccessToast("Pot Created Successfully!", `Successfully created Pot #${potId} with ${amount} USDC`, { potId, amount: `${amount} USDC` });
+    showSuccessToast("Pot Created Successfully!", `Successfully created Pot #${potId} with ${amount} USD`, { potId, amount: `${amount} USD` });
     
     setCreationSuccess(true);
     setTimeout(() => navigate("/pots"), 3000);
@@ -378,11 +344,11 @@ export function CreatePotPage() {
                     <div>
                       <CardHeader>
                         <CardTitle className="font-display text-2xl">Step 1: Define Your Pot</CardTitle>
-                        <CardDescription>Set the total USDC amount and how long the pot will be active.</CardDescription>
+                        <CardDescription>Set the total USD amount and how long the pot will be active.</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-6">
                         <div className="space-y-2">
-                          <Label htmlFor="amount">Pot Amount (USDC)</Label>
+                          <Label htmlFor="amount">Pot Amount (USD)</Label>
                           <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} placeholder="e.g., 1000" min="0.001" />
                         </div>
                         <div className="space-y-4">
@@ -551,7 +517,7 @@ export function CreatePotPage() {
                       </CardHeader>
                       <CardContent className="space-y-6">
                         <div className="space-y-4">
-                          <Label>Entry Fee (USDC)</Label>
+                          <Label>Entry Fee (USD)</Label>
                           <div className="space-y-3">
                             <div className="flex items-center gap-4">
                               <div className="relative">
@@ -692,9 +658,9 @@ export function CreatePotPage() {
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <ul className="space-y-2 text-sm">
-                          <li className="flex justify-between"><span>Pot Amount:</span> <span className="font-medium">${amount} USDC</span></li>
+                          <li className="flex justify-between"><span>Pot Amount:</span> <span className="font-medium">${amount} USD</span></li>
                           <li className="flex justify-between"><span>Expires:</span> <span className="font-medium">{customEndDate ? format(customEndDate, "PPP 'at' p") : "Not set"}</span></li>
-                          <li className="flex justify-between"><span>Entry Fee:</span> <span className="font-medium">${entryFee.toFixed(4)} USDC</span></li>
+                          <li className="flex justify-between"><span>Entry Fee:</span> <span className="font-medium">${entryFee.toFixed(4)} USD</span></li>
                           <li className="flex justify-between items-center">
                             <span>Password:</span>
                             <div className="flex items-center gap-2">
@@ -730,7 +696,7 @@ export function CreatePotPage() {
                           )}
                         </ul>
                         <Button onClick={handleCreatePot} disabled={isSubmitting || !walletState.isConnected || !password || Object.keys(colorMap).length < mappableDirections.length} className="w-full bg-brand-green hover:bg-brand-green/90 text-white font-bold text-lg py-6">
-                          {isSubmitting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : `Deposit ${amount} USDC & Create Pot`}
+                          {isSubmitting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : `Deposit ${amount} USD & Create Pot`}
                         </Button>
                       </CardContent>
                     </div>

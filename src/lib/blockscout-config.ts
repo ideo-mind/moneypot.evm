@@ -1,28 +1,35 @@
 import { defineChain } from "viem"
 
-// Creditcoin Testnet configuration for Blockscout SDK
-export const creditcoinTestnetBlockscout = defineChain({
-  id: 102031,
-  name: "Creditcoin Testnet",
+// Sepolia Testnet configuration for Blockscout SDK
+export const sepoliaBlockscout = defineChain({
+  id: 11155111,
+  name: "Sepolia",
   nativeCurrency: {
     decimals: 18,
-    name: "Creditcoin",
-    symbol: "CTC",
+    name: "Ether",
+    symbol: "ETH",
   },
   rpcUrls: {
     default: {
-      http: ["https://rpc.cc3-testnet.creditcoin.network"],
-      webSocket: ["wss://rpc.cc3-testnet.creditcoin.network"],
+      http: [
+        "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
+        "https://ethereum-sepolia-rpc.publicnode.com",
+      ],
+      webSocket: [
+        "wss://sepolia.infura.io/ws/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
+      ],
     },
     public: {
-      http: ["https://rpc.cc3-testnet.creditcoin.network"],
-      webSocket: ["wss://rpc.cc3-testnet.creditcoin.network"],
+      http: [
+        "https://sepolia.rpc.hypersync.xyz",
+        "https://11155111.rpc.hypersync.xyz",
+      ],
     },
   },
   blockExplorers: {
     default: {
-      name: "Blockscout",
-      url: "https://creditcoin-testnet.blockscout.com",
+      name: "Sepolia Explorer",
+      url: "https://eth-sepolia.blockscout.com",
     },
   },
   testnet: true,
@@ -32,75 +39,60 @@ export const creditcoinTestnetBlockscout = defineChain({
 export const blockscoutConfig = {
   // Primary chain configuration
   primaryChain: {
-    id: 102031,
-    name: "Creditcoin Testnet",
-    rpcUrl: "https://rpc.cc3-testnet.creditcoin.network",
-    explorerUrl: "https://creditcoin-testnet.blockscout.com",
-    apiUrl: "https://creditcoin-testnet.blockscout.com/api/v2",
+    id: 11155111,
+    name: "Sepolia",
+    rpcUrl: "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
+    explorerUrl: "https://eth-sepolia.blockscout.com",
+    apiUrl: "https://eth-sepolia.blockscout.com/api/v2",
     nativeCurrency: {
-      name: "Creditcoin",
-      symbol: "CTC",
+      name: "Ether",
+      symbol: "ETH",
       decimals: 18,
     },
     isTestnet: true,
   },
 
-  // Multi-chain support structure for future expansion
+  // Single chain support for Sepolia
   supportedChains: [
     {
-      id: 102031,
-      name: "Creditcoin Testnet",
-      rpcUrl: "https://rpc.cc3-testnet.creditcoin.network",
-      explorerUrl: "https://creditcoin-testnet.blockscout.com",
-      apiUrl: "https://creditcoin-testnet.blockscout.com/api/v2",
+      id: 11155111,
+      name: "Sepolia",
+      rpcUrl: "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
+      explorerUrl: "https://eth-sepolia.blockscout.com",
+      apiUrl: "https://eth-sepolia.blockscout.com/api/v2",
       nativeCurrency: {
-        name: "Creditcoin",
-        symbol: "CTC",
+        name: "Ether",
+        symbol: "ETH",
         decimals: 18,
       },
       isTestnet: true,
       isActive: true,
     },
-    // Future chains can be added here
-    // {
-    //   id: 102030, // Creditcoin Mainnet (when available)
-    //   name: "Creditcoin Mainnet",
-    //   rpcUrl: "https://rpc.cc3.creditcoin.network",
-    //   explorerUrl: "https://creditcoin.blockscout.com",
-    //   apiUrl: "https://creditcoin.blockscout.com/api/v2",
-    //   nativeCurrency: {
-    //     name: "Creditcoin",
-    //     symbol: "CTC",
-    //     decimals: 18,
-    //   },
-    //   isTestnet: false,
-    //   isActive: false,
-    // },
   ],
 
   // Token configurations
   tokens: {
-    USDC: {
-      address: "0xEC020aA4De9567Ae9dF9f43Da71414aE4932F6f3",
-      symbol: "USDC",
-      name: "USD Coin",
+    PYUSD: {
+      address: "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9",
+      symbol: "PYUSD",
+      name: "PayPal USD",
       decimals: 6,
-      chainId: 102031,
+      chainId: 11155111,
     },
-    CTC: {
+    ETH: {
       address: "0x0000000000000000000000000000000000000000", // Native token
-      symbol: "CTC",
-      name: "Creditcoin",
+      symbol: "ETH",
+      name: "Ether",
       decimals: 18,
-      chainId: 102031,
+      chainId: 11155111,
     },
   },
 
   // Contract addresses
   contracts: {
     MoneyPot: {
-      address: "0xEC020aA4De9567Ae9dF9f43Da71414aE4932F6f3",
-      chainId: 102031,
+      address: "0x03EE9A0211EA332f70b9D30D14a13FD8e465aa43",
+      chainId: 11155111,
     },
   },
 

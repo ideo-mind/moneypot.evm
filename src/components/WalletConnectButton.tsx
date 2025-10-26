@@ -7,24 +7,26 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { formatCTC, publicClient } from '@/config/viem';
+import { formatETH, publicClient } from '@/config/viem';
 import { evmContractService } from '@/lib/evm-api';
 import { getConnectedWallet, switchNetwork, addNetwork } from '@/lib/web3onboard';
 import { AlertTriangle, ChevronDown, Coins, Copy, LogOut, Wallet, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useWallet } from './WalletProvider';
+import { useChainSwitch } from '@/hooks/use-chain-switch';
 
 interface WalletBalances {
   usdc: number | null;
-  ctc: number | null;
+  eth: number | null;
   loading: boolean;
 }
 
 export function WalletConnectButton() {
   const { walletState, connectEVM, disconnect } = useWallet();
+  const { currentChain } = useChainSwitch();
   const [balances, setBalances] = useState<WalletBalances>({
     usdc: null,
-    ctc: null,
+    eth: null,
     loading: false
   });
   const [isWrongNetwork, setIsWrongNetwork] = useState(false);
@@ -40,7 +42,7 @@ export function WalletConnectButton() {
           // Get current chain ID from the provider
           evmWallet.provider.request({ method: 'eth_chainId' })
             .then((chainId: string) => {
-              const isCorrectNetwork = chainId === '0x18e7f'; // Creditcoin testnet chain ID in hex (102031)
+              const isCorrectNetwork = chainId === `0x${currentChain.id.toString(16)}`; // Current chain ID in hex
               setIsWrongNetwork(!isCorrectNetwork);
             })
             .catch(() => {
@@ -78,35 +80,35 @@ export function WalletConnectButton() {
       if (walletState.isConnected && walletState.address) {
         setBalances(prev => ({ ...prev, loading: true }));
         try {
-          // Get CTC balance
-          let ctcBalance = 0;
+          // Get ETH balance
+          let ethBalance = 0;
           try {
             const balance = await publicClient.getBalance({
               address: walletState.address as `0x${string}`,
             });
-            ctcBalance = formatCTC(balance);
+            ethBalance = formatETH(balance);
           } catch (error) {
-            console.error('Failed to fetch CTC balance:', error);
+            console.error('Failed to fetch ETH balance:', error);
           }
 
-          // Get USDC balance from contract
+          // Get PYUSD balance from contract
           let usdcBalance = 0;
           try {
             usdcBalance = await evmContractService.getBalance(walletState.address as `0x${string}`);
           } catch (error) {
-            console.error('Failed to fetch USDC balance:', error);
+            console.error('Failed to fetch PYUSD balance:', error);
           }
 
           setBalances({
             usdc: usdcBalance,
-            ctc: ctcBalance,
+            eth: ethBalance,
             loading: false
           });
         } catch (error) {
           console.error('Failed to fetch balances:', error);
           setBalances({
             usdc: null,
-            ctc: null,
+            eth: null,
             loading: false
           });
         }
@@ -138,7 +140,7 @@ export function WalletConnectButton() {
 
   const switchToTestnet = async () => {
     try {
-      await switchNetwork(102031); // Creditcoin testnet chain ID
+      await switchNetwork(102031); // Testnet chain ID
     } catch (error) {
       console.error('Failed to switch EVM network:', error);
       // If switching fails, try adding the network first
@@ -158,7 +160,7 @@ export function WalletConnectButton() {
           <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
             <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
             <span className="text-sm text-red-700 dark:text-red-300">
-              Wrong network! Please switch to Creditcoin Testnet
+              Wrong network! Please switch to {currentChain.name}
             </span>
             <Button
               size="sm"
@@ -212,7 +214,7 @@ export function WalletConnectButton() {
               <div className="flex items-center gap-2">
                 <Wifi className={`w-3 h-3 ${isWrongNetwork ? 'text-red-500' : 'text-green-500'}`} />
                 <span className={`text-xs ${isWrongNetwork ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                  Creditcoin Testnet
+                  {currentChain.name}
                 </span>
                 {isWrongNetwork && (
                   <span className="text-xs text-red-500">(Wrong Network)</span>
@@ -233,11 +235,11 @@ export function WalletConnectButton() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-xs">
                     <Coins className="w-3 h-3 text-purple-500" />
-                    <span>CTC: {typeof balances.ctc === 'number' ? balances.ctc.toFixed(4) : '0.0000'}</span>
+                    <span>ETH: {typeof balances.eth === 'number' ? balances.eth.toFixed(4) : '0.0000'}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
                     <Coins className="w-3 h-3 text-blue-500" />
-                    <span>USDC: {typeof balances.usdc === 'number' ? balances.usdc.toFixed(2) : '0.00'}</span>
+                    <span>PYUSD: {typeof balances.usdc === 'number' ? balances.usdc.toFixed(2) : '0.00'}</span>
                   </div>
                 </div>
               )}

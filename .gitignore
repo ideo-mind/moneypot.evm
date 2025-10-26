@@ -30,3 +30,4 @@ dist-ssr
 
 data/
 .vercel
+tsconfig.tsbuildinfo

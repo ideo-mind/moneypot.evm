@@ -39,7 +39,7 @@ export const useBlockscoutTx = () => {
         switch (type) {
           case "create_pot":
             customDescription = `Creating Money Pot${
-              amount ? ` with ${amount} USDC` : ""
+              amount ? ` with ${amount} USD` : ""
             }`
             break
           case "attempt_pot":
@@ -49,7 +49,7 @@ export const useBlockscoutTx = () => {
             customDescription = `Expiring Pot${potId ? ` #${potId}` : ""}`
             break
           case "token_approval":
-            customDescription = `Approving USDC spending`
+            customDescription = `Approving USD spending`
             break
           case "airdrop":
             customDescription = `Requesting airdrop`
@@ -103,7 +103,7 @@ export const useBlockscoutTx = () => {
         enhancedDescription += ` Pot #${potId}`
       }
       if (amount) {
-        enhancedDescription += ` (${amount} USDC)`
+        enhancedDescription += ` (${amount} USD)`
       }
 
       toast.success(title, {

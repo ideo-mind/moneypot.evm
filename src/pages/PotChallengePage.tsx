@@ -1,15 +1,15 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
-import { usePotStore } from "@/store/pot-store";
 import { useEVMPotStore } from "@/store/evm-pot-store";
 import { useWallet } from "@/components/WalletProvider";
 import { useNetworkAdapter } from "@/lib/network-adapter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Loader2, PartyPopper, ShieldClose, SkipForward, CheckCircle2, XCircle, KeyRound, Zap, Target } from "lucide-react";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import { useBlockscoutTx } from "@/hooks/use-blockscout-tx";
 import { BlockscoutBalance } from "@/components/BlockscoutBalance";
+import { useChainSwitch } from "@/hooks/use-chain-switch";
 
 
 
@@ -30,18 +30,10 @@ type KeyState = "unchecked" | "validating" | "valid" | "invalid";
 export function PotChallengePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { connected, signAndSubmitTransaction, account, network } = useWallet();
   const { walletState } = useWallet();
+  const { currentChain } = useChainSwitch();
   const { showCustomToast, showSuccessToast, showErrorToast, showPendingToast } = useBlockscoutTx();
   const { adapter } = useNetworkAdapter();
-  
-  // Old Aptos store - no longer used
-  
-  
-  
-  
-  
-  
   
   // EVM store
   const evmPot = useEVMPotStore((state) => state.currentPot);
@@ -51,34 +43,17 @@ export function PotChallengePage() {
   const evmAddAttempt = useEVMPotStore((state) => state.addAttempt);
   const evmExpirePot = useEVMPotStore((state) => state.expirePot);
   
-  // Get current network data based on wallet type
-  const getCurrentNetworkData = () => {
-    if (walletState?.type === 'evm') {
-      return {
-        pot: evmPot,
-        loading: evmLoading,
-        error: evmError,
-        fetchPotById: evmFetchPotById,
-        addAttempt: evmAddAttempt,
-        expirePot: evmExpirePot,
-        networkName: 'Creditcoin Testnet',
-        networkType: 'evm'
-      };
-    } else {
-      return {
-        pot: aptosPot,
-        loading: aptosLoading,
-        error: aptosError,
-        fetchPotById: aptosFetchPotById,
-        addAttempt: aptosAddAttempt,
-        expirePot: aptosExpirePot,
-        networkName: 'Aptos Testnet',
-        networkType: 'aptos'
-      };
-    }
+  // Use EVM data directly since we only support EVM now
+  const currentData = {
+    pot: evmPot,
+    loading: evmLoading,
+    error: evmError,
+    fetchPotById: evmFetchPotById,
+    addAttempt: evmAddAttempt,
+    expirePot: evmExpirePot,
+    networkName: currentChain.name,
+    networkType: 'evm'
   };
-  
-  const currentData = getCurrentNetworkData();
   const pot = currentData.pot;
   const { addTransaction, updateTransaction } = useTransactionStore();
   const [gameState, setGameState] = useState<GameState>("idle");
@@ -90,6 +65,7 @@ export function PotChallengePage() {
   const [currentRound, setCurrentRound] = useState(0);
   const [solutions, setSolutions] = useState<string[]>([]);
   const [attemptId, setAttemptId] = useState<string>("");
+  const [challengeId, setChallengeId] = useState<string>("");
   const [selectedDirection, setSelectedDirection] = useState<string>("");
   const [showAnimation, setShowAnimation] = useState(false);
   const [dynamicColors, setDynamicColors] = useState<Record<string, string>>({});
@@ -220,14 +196,10 @@ export function PotChallengePage() {
       return;
     }
     
-    // Validate network based on wallet type
-    if (walletState.type === 'aptos') {
-      if (!connected || !account) {
-        showErrorToast("Wallet Required", "Please connect your wallet first.");
-        return;
-      }
-      
-      // Removed Aptos validation
+    // Validate EVM wallet
+    if (walletState.type !== 'evm') {
+      showErrorToast("Unsupported Wallet", "Please connect an EVM wallet.");
+      return;
     }
     
     if (!pot) {
@@ -253,15 +225,11 @@ export function PotChallengePage() {
       status: 'pending',
       description: `Attempting Pot #${pot.id}`,
       potId: pot.id,
-      amount: `${pot.entryFee} USDC`,
+      amount: `${pot.entryFee} USD`,
     });
     
     try {
-      if (walletState.type === 'evm') {
-        await handleEVMAttemptPot(toastId, txId);
-      } else {
-        // Removed Aptos code
-      }
+      await handleEVMAttemptPot(txId);
     } catch (error) {
       // Update transaction as failed
       updateTransaction(txId, { 
@@ -274,17 +242,11 @@ export function PotChallengePage() {
     }
   };
 
-  const handleEVMAttemptPot = async (toastId: string, txId: string) => {
+  const handleEVMAttemptPot = async (txId: string) => {
     // Attempt pot using network adapter
-    const result = await adapter.client.attemptPot({
+    const attemptId = await adapter.client.attemptPot({
       potId: pot!.id,
     });
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to attempt EVM pot');
-    }
-
-    const attemptId = result.data;
     
     // Update transaction with hash (we'll need to get this from the contract service)
     updateTransaction(txId, { hash: attemptId }); // Using attemptId as hash for now
@@ -311,6 +273,14 @@ export function PotChallengePage() {
 
       const authResponse = await evmVerifierService.authenticateOptions(attemptId, signature);
       console.log("Full EVM auth response:", authResponse);
+      
+      // Extract challenge_id from response (as per demo.py line 815)
+      const returnedChallengeId = authResponse.challenge_id;
+      if (!returnedChallengeId) {
+        throw new Error('No challenge_id returned from authenticate_options');
+      }
+      console.log("Challenge ID from authenticate/options:", returnedChallengeId);
+      setChallengeId(returnedChallengeId);
       
       // Store dynamic colors and directions
       setDynamicColors(authResponse.colors || {});
@@ -354,133 +324,6 @@ export function PotChallengePage() {
     });
   };
 
-  const handleAptosAttemptPot = async (toastId: string, txId: string) => {
-    // Use wallet adapter to sign and submit transaction
-    const response = await signAndSubmitTransaction({
-      sender: account!.address,
-      data: {
-        function: `${MODULE_ADDRESS}::${MODULE_NAME}::attempt_pot_entry`,
-        typeArguments: [],
-        functionArguments: [BigInt(pot!.id).toString()],
-      },
-    });
-    
-    // Update transaction with hash
-    updateTransaction(txId, { hash: response.hash });
-    
-    // Wait for transaction to complete
-    const result = await aptos.waitForTransaction({
-      transactionHash: response.hash,
-    });
-    
-    // Debug: Log all events to understand the structure
-    console.log("Transaction result:", result);
-    console.log("All events:", (result as any).events);
-    
-    let extractedAttemptId: string | undefined;
-    
-    // Extract attempt_id from events using proper PotEvent type
-    const attemptEvent = (result as any).events?.find((e: any) => {
-      console.log("Checking event:", e);
-      // Look for PotEvent with event_type containing "attempted"
-      if (e.type.includes("PotEvent")) {
-        const eventData = e.data as money_pot_manager.PotEvent;
-        console.log("PotEvent data:", eventData);
-        return eventData.event_type.includes("attempted");
-      }
-      return false;
-    });
-    
-    if (attemptEvent) {
-      const eventData = attemptEvent.data as money_pot_manager.PotEvent;
-      extractedAttemptId = eventData.id.toString();
-      console.log("Extracted attempt_id from PotEvent:", extractedAttemptId);
-    } else {
-      // Fallback: try to find any event that might contain attempt information
-      console.log("No PotEvent found, trying fallback...");
-      const fallbackEvent = (result as any).events?.find((e: any) => 
-        e.type.includes("money_pot") || e.type.includes("attempt") || e.type.includes("attempted")
-      );
-      
-      if (fallbackEvent) {
-        console.log("Found fallback event:", fallbackEvent);
-        // Try to extract attempt_id from various possible locations
-        extractedAttemptId = fallbackEvent.data?.attempt_id?.toString() || 
-                            fallbackEvent.data?.id?.toString() || 
-                            fallbackEvent.data?.value?.toString();
-        if (extractedAttemptId) {
-          console.log("Extracted attempt_id from fallback:", extractedAttemptId);
-        } else {
-          throw new Error(`Could not extract attempt_id from fallback event: ${JSON.stringify(fallbackEvent)}`);
-        }
-      } else {
-        throw new Error(`Could not find any relevant event in transaction result. Available events: ${JSON.stringify((result as any).events)}`);
-      }
-    }
-    
-    if (!extractedAttemptId) {
-      throw new Error("Could not extract attempt_id from any event.");
-    }
-    
-    // Store attempt_id for later use in verification
-    setAttemptId(extractedAttemptId);
-    
-    toast.success("Entry fee paid! Starting 1P authentication...", { id: toastId });
-    setGameState("fetching_challenge");
-    
-    // Step 2: Get 1P authentication challenges from verifier service
-    // Use the hunter's address as the public key (as per app.py reference)
-    const hunterAddress = account!.address;
-    console.log("Getting 1P challenges for hunter:", hunterAddress);
-    
-    try {
-      const authResponse = await getAuthOptions(extractedAttemptId.toString(), hunterAddress.toString());
-      console.log("Full auth response:", authResponse);
-      
-      // Store dynamic colors and directions
-      setDynamicColors(authResponse.colors || {});
-      setDynamicDirections(authResponse.directions || {});
-      console.log("Dynamic colors:", authResponse.colors);
-      console.log("Dynamic directions:", authResponse.directions);
-      
-      const fetchedChallenges = authResponse.challenges || [];
-      console.log("Received 1P challenges:", fetchedChallenges);
-      console.log("Number of challenges:", fetchedChallenges.length);
-      console.log("Pot difficulty:", pot?.difficulty);
-      console.log("Expected challenges based on difficulty:", pot?.difficulty);
-      
-      if (fetchedChallenges.length > 0) {
-        console.log("First challenge structure:", fetchedChallenges[0]);
-        console.log("First challenge grid length:", fetchedChallenges[0].grid?.length || 'No grid');
-        console.log("First challenge color groups:", fetchedChallenges[0].colorGroups);
-      }
-      
-      // Check if we got valid challenges
-      if (fetchedChallenges.length === 0) {
-        throw new Error("No challenges received from verifier service");
-      }
-      
-      // Set challenges for human interaction
-      setChallenges(fetchedChallenges);
-      setCurrentRound(0);
-      setSolutions([]);
-      setGameState("playing");
-    } catch (authError) {
-      console.error("Failed to get 1P challenges:", authError);
-      toast.error("Failed to get 1P challenges from verifier service", { 
-        id: toastId, 
-        description: authError instanceof Error ? authError.message : 'Unknown error'
-      });
-      setGameState("idle");
-      return;
-    }
-    
-    // Update transaction as successful
-    updateTransaction(txId, { 
-      status: 'success',
-      description: `Successfully paid entry fee for Pot #${pot!.id}`
-    });
-  };
   const submitMove = async (move: string) => {
     console.log("Submitting move:", move);
     console.log("Current solutions:", solutions);
@@ -530,23 +373,34 @@ export function PotChallengePage() {
         });
         
         let verifyResponse;
-        if (walletState?.type === 'evm') {
+        try {
+          // Create signature for wallet authentication
+          const evmWallet = getConnectedWallet();
+          if (!evmWallet) {
+            throw new Error('No EVM wallet connected');
+          }
+          
+          if (!challengeId) {
+            throw new Error('No challenge_id available for verification');
+          }
+          
+          // Sign the challenge_id as per demo.py (line 348: "messageToVerify when challenge_id is present")
+          const signature = await EVMVerifierServiceClient.createEVMSignature(evmWallet, challengeId);
+          
           // Use EVM verifier service
-          const solutions = updatedSolutions.map((solution, index) => ({
-            challenge_id: index.toString(),
-            answer: solution
-          }));
+          const solutions = updatedSolutions;
           
           verifyResponse = await evmVerifierService.authenticateVerify(
             solutions,
-            attemptId.toString(),
-            walletState.address!
+            challengeId,
+            signature
           );
           console.log("Response from EVM /authenticate/verify:", verifyResponse);
-        } else {
-          // Use Aptos verifier service
-          verifyResponse = await verifyAuth(attemptId.toString(), updatedSolutions);
-          console.log("Response from Aptos /authenticate/verify:", verifyResponse);
+        } catch (error) {
+          console.error("1P verification failed:", error);
+          showErrorToast("1P Verification Failed", (error as Error).message, {});
+          setGameState("lost");
+          return;
         }
         
         const { success } = verifyResponse;
@@ -562,9 +416,11 @@ export function PotChallengePage() {
           setGameState("lost");
         }
       } catch (error) {
-        console.error("1P verification failed:", error);
+        console.error("1P verification process failed:", error);
         showErrorToast("1P Verification Failed", (error as Error).message, {});
         setGameState("lost");
+      } finally {
+        toast.dismiss(toastId);
       }
     }
   };
@@ -587,54 +443,22 @@ export function PotChallengePage() {
     });
     
     try {
-      if (walletState.type === 'evm') {
-        // Use EVM expire pot
-        const success = await currentData.expirePot(pot.id);
-        if (!success) {
-          throw new Error('Failed to expire EVM pot');
-        }
-        updateTransaction(txId, { hash: pot.id }); // Using pot ID as hash for now
-      } else {
-        // Submit blockchain transaction for Aptos
-        const response = await signAndSubmitTransaction({
-          sender: account!.address,
-          data: {
-            function: `${MODULE_ADDRESS}::${MODULE_NAME}::expire_pot`,
-            typeArguments: [],
-            functionArguments: [BigInt(pot.id).toString()],
-          },
-        });
-        
-        // Update transaction with hash
-        updateTransaction(txId, { hash: response.hash });
-        
-        // Wait for transaction to complete
-        await aptos.waitForTransaction({
-          transactionHash: response.hash,
-        });
-      }
-      
-      // Update local state
+      // Use EVM expire pot
       const success = await currentData.expirePot(pot.id);
-      if (success) {
-        // Update transaction as successful
-        updateTransaction(txId, { 
-          status: 'success',
-          description: `Successfully expired Pot #${pot.id}`
-        });
-        
-        toast.success("Pot expired successfully!");
-        // Refresh the pot data
-        await currentData.fetchPotById(pot.id);
-      } else {
-        // Update transaction as failed
-        updateTransaction(txId, { 
-          status: 'failed', 
-          error: 'Failed to update local state'
-        });
-        
-        toast.error("Failed to expire pot");
+      if (!success) {
+        throw new Error('Failed to expire EVM pot');
       }
+      updateTransaction(txId, { hash: pot.id }); // Using pot ID as hash for now
+      
+      // Update transaction as successful
+      updateTransaction(txId, { 
+        status: 'success',
+        description: `Successfully expired Pot #${pot.id}`
+      });
+      
+      toast.success("Pot expired successfully!");
+      // Refresh the pot data
+      await currentData.fetchPotById(pot.id);
     } catch (error) {
       console.error('Failed to expire pot:', error);
       
@@ -708,6 +532,18 @@ export function PotChallengePage() {
             <CardDescription>Optionally enter the 1FA private key for this pot, or proceed without it.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Display 1FA Address */}
+            {pot.one_fa_address && (
+              <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+                <Label className="text-sm font-semibold mb-2 block">1FA Address (for reference)</Label>
+                <p className="font-mono text-xs break-all text-slate-700 dark:text-slate-300">
+                  {pot.one_fa_address}
+                </p>
+              </div>
+            )}
+            
+            {/* TODO: Make 1FA private key required in future versions */}
+            
             <div className="space-y-2 text-left">
               <Label htmlFor="1fa-key">1FA Private Key (Optional)</Label>
               <div className="relative">
@@ -730,7 +566,7 @@ export function PotChallengePage() {
                 <Button variant="link" size="sm" onClick={() => validateKey(oneFaPrivateKey)} disabled={!oneFaPrivateKey || keyState === 'validating'}>Validate Key</Button>
               </div>
             </div>
-            <p className="text-lg">Pay the entry fee of <span className="font-bold text-brand-gold">{pot.entryFee} USDC</span> to begin.</p>
+            <p className="text-lg">Pay the entry fee of <span className="font-bold text-brand-gold">{pot.entryFee} USD</span> to begin.</p>
             <div className="space-y-3">
               {pot.isExpired ? (
                 <div className="w-full max-w-xs mx-auto bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-bold text-lg h-16 rounded-lg flex items-center justify-center cursor-not-allowed">
@@ -739,11 +575,11 @@ export function PotChallengePage() {
               ) : (
                 <Button 
                   onClick={handleAttempt} 
-                  disabled={!connected} 
+                  disabled={!walletState.isConnected} 
                   size="lg" 
                   className="w-full max-w-xs mx-auto bg-brand-green hover:bg-brand-green/90 text-white font-bold text-lg h-16"
                 >
-                  {connected ? `Pay ${pot.entryFee} USDC & Start` : "Connect Wallet to Start"}
+                  {walletState.isConnected ? `Pay ${pot.entryFee} USD & Start` : "Connect Wallet to Start"}
                 </Button>
               )}
               
@@ -933,7 +769,7 @@ export function PotChallengePage() {
           </h2>
           <p className="text-xl text-muted-foreground">
             {gameState === "verifying" && "Checking your 1P solutions with the verifier service..."}
-            {gameState === "won" && `🎉 Congratulations! You've successfully solved the 1P challenge! ${pot.potentialReward.toLocaleString()} USDC is on its way to your wallet.`}
+            {gameState === "won" && `🎉 Congratulations! You've successfully solved the 1P challenge! ${pot.potentialReward.toLocaleString()} USD is on its way to your wallet.`}
             {gameState === "lost" && "❌ 1P authentication failed. The pot remains locked. Better luck next time!"}
           </p>
           <Button onClick={() => navigate('/pots')} size="lg">Back to Pots</Button>
@@ -961,11 +797,11 @@ export function PotChallengePage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg">
                   <div className="font-semibold text-green-700 dark:text-green-300">Pot Value</div>
-                  <div className="text-lg font-bold">{pot?.totalValue ? pot.totalValue.toFixed(2) : '0'} USDC</div>
+                  <div className="text-lg font-bold">{pot?.totalValue ? pot.totalValue.toFixed(2) : '0'} USD</div>
                 </div>
                 <div className="bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg">
                   <div className="font-semibold text-green-700 dark:text-green-300">Entry Fee</div>
-                  <div className="text-lg font-bold">{pot?.entryFee ? pot.entryFee.toFixed(2) : '0'} USDC</div>
+                  <div className="text-lg font-bold">{pot?.entryFee ? pot.entryFee.toFixed(2) : '0'} USD</div>
                 </div>
               </div>
               

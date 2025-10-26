@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Coins, Wallet } from 'lucide-react';
 import { getCurrentChainConfig } from '@/lib/blockscout-config';
+import { formatUnits } from 'viem';
 
 interface TokenBalance {
   address: string;
@@ -113,12 +114,22 @@ export const BlockscoutBalance: React.FC<BlockscoutBalanceProps> = ({
   }
 
   const usdcToken = tokenBalances.find(token => 
-    token.symbol === 'USDC' || token.address.toLowerCase() === '0xEC020aA4De9567Ae9dF9f43Da71414aE4932F6f3'.toLowerCase()
+    token.symbol === 'PYUSD' || token.symbol === 'USD' || token.address.toLowerCase() === '0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9'.toLowerCase()
   );
 
   const nativeToken = tokenBalances.find(token => 
-    token.symbol === 'CTC' || token.isNative
+    token.symbol === 'ETH' || token.isNative
   );
+
+  // Format balance using formatUnits
+  const formatBalance = (balance: string, decimals: number): string => {
+    try {
+      const balanceBigInt = BigInt(balance);
+      return parseFloat(formatUnits(balanceBigInt, decimals)).toFixed(2);
+    } catch {
+      return parseFloat(balance).toFixed(2);
+    }
+  };
 
   return (
     <div className={`space-y-2 ${className}`}>
@@ -141,7 +152,7 @@ export const BlockscoutBalance: React.FC<BlockscoutBalanceProps> = ({
               </span>
             </div>
             <Badge variant="secondary" className="text-xs">
-              {parseFloat(usdcToken.balance).toFixed(2)}
+              {formatBalance(usdcToken.balance, usdcToken.decimals)}
             </Badge>
           </div>
         )}
@@ -155,7 +166,7 @@ export const BlockscoutBalance: React.FC<BlockscoutBalanceProps> = ({
               </span>
             </div>
             <Badge variant="secondary" className="text-xs">
-              {parseFloat(nativeToken.balance).toFixed(4)}
+              {formatBalance(nativeToken.balance, nativeToken.decimals)}
             </Badge>
           </div>
         )}

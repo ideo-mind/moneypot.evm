@@ -1,5 +1,6 @@
 import { getConnectedWallet, onboard } from '@/lib/web3onboard';
 import { PropsWithChildren, createContext, useContext, useEffect, useState } from 'react';
+import { evmContractService } from '@/lib/evm-api';
 
 // Wallet types - only EVM now
 export type WalletType = 'evm';
@@ -29,47 +30,47 @@ export const WalletProvider = ({ children }: PropsWithChildren) => {
     error: null,
   });
 
+
   // Monitor EVM wallet connection
   useEffect(() => {
-    try {
-      const handleEVMWalletChange = () => {
-        const evmWallet = getConnectedWallet();
-        if (evmWallet) {
-          setWalletState(prev => ({
-            ...prev,
-            type: 'evm',
-            address: evmWallet.accounts[0]?.address || null,
-            isConnected: true,
-            error: null,
-          }));
-        } else {
-          setWalletState(prev => ({
-            ...prev,
-            type: null,
-            address: null,
-            isConnected: false,
-          }));
-        }
-      };
-
-      // Subscribe to wallet changes
-      const unsubscribe = onboard.state.select('wallets').subscribe(handleEVMWalletChange);
-
-      // Initial check
-      handleEVMWalletChange();
-
-      return () => {
-        unsubscribe.unsubscribe();
-      };
-    } catch (error) {
-      console.error('WalletProvider initialization error:', error);
-      setWalletState(prev => ({
-        ...prev,
-        error: error instanceof Error ? error.message : 'Wallet initialization failed',
-        isLoading: false,
-      }));
+    const handleEVMWalletChange = () => {
+      const evmWallet = getConnectedWallet()
+      if (evmWallet && evmWallet.accounts.length > 0) {
+        const account = evmWallet.accounts[0]
+        
+        // Set wallet client in contract service
+        evmContractService.setWalletClient(evmWallet)
+        
+        setWalletState({
+          type: 'evm',
+          address: account.address,
+          isConnected: true,
+          isLoading: false,
+          error: null,
+        })
+      } else {
+        setWalletState({
+          type: null,
+          address: null,
+          isConnected: false,
+          isLoading: false,
+          error: null,
+        })
+      }
     }
-  }, []);
+
+    // Initial check
+    handleEVMWalletChange()
+
+    // Subscribe to wallet changes
+    const unsubscribe = onboard.state.select('wallets').subscribe((wallets) => {
+      handleEVMWalletChange()
+    })
+
+    return () => {
+      unsubscribe.unsubscribe()
+    }
+  }, [])
 
   const connectEVM = async () => {
     setWalletState(prev => ({ ...prev, isLoading: true, error: null }));
@@ -96,28 +97,19 @@ export const WalletProvider = ({ children }: PropsWithChildren) => {
   };
 
   const disconnect = async () => {
-    setWalletState(prev => ({ ...prev, isLoading: true }));
+    setWalletState(prev => ({ ...prev, isLoading: true }))
     try {
-      const wallets = onboard.state.get().wallets;
-      for (const wallet of wallets) {
-        await onboard.disconnectWallet({ label: wallet.label });
-      }
-
-      setWalletState({
-        type: null,
-        address: null,
-        isConnected: false,
-        isLoading: false,
-        error: null,
-      });
+      await onboard.disconnectWallet()
+      // State will be updated by the subscription handler
     } catch (error) {
+      console.error('Disconnect error:', error)
       setWalletState(prev => ({
         ...prev,
         error: error instanceof Error ? error.message : 'Failed to disconnect wallet',
         isLoading: false
-      }));
+      }))
     }
-  };
+  }
 
   const contextValue: WalletContextType = {
     walletState,
