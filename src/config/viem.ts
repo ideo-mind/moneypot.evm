@@ -43,15 +43,16 @@ export const sepolia = defineChain({
         // "https://eth-sepolia.g.alchemy.com/v2/" + ALCHEMY_API_KEY,
         // "https://11155111.rpc.hypersync.xyz", //FIXME: hypersync rpc is not workign
         // "https://sepolia.rpc.hypersync.xyz",
+        ,
       ],
     },
     public: {
       http: [
         "https://ethereum-sepolia-rpc.publicnode.com",
         "https://eth-sepolia.public.blastapi.io",
-        "https://eth-sepolia-testnet.rpc.grove.city/v1/01fdb492",
         "https://0xrpc.io/sep",
 
+        // "https://eth-sepolia-testnet.rpc.grove.city/v1/01fdb492",
         // "https://rpc.sepolia.org",
         // "https://sepolia.gateway.tenderly.co",
       ],
