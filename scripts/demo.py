@@ -23,7 +23,7 @@ import time
 load_dotenv()
 
 # Configuration
-MONEY_AUTH_URL = os.getenv("MONEY_AUTH_URL", "http://localhost:8787")
+MONEY_AUTH_URL = os.getenv("MONEY_AUTH_URL", "https://auth.money-pot.unreal.art")
 CHAIN_ID = int(os.getenv("CHAIN_ID", "102031"))  # Creditcoin Testnet
 
 # Dynamic configuration (will be fetched from /chains endpoint)
@@ -49,6 +49,30 @@ def load_money_pot_abi():
         raise RuntimeError("abi not found")
 # Load the real ABI
 MONEY_POT_ABI = load_money_pot_abi()
+
+# Minimal ERC20 ABI for approval operations
+ERC20_ABI = [
+    {
+        "constant": False,
+        "inputs": [
+            {"name": "_spender", "type": "address"},
+            {"name": "_value", "type": "uint256"}
+        ],
+        "name": "approve",
+        "outputs": [{"name": "", "type": "bool"}],
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [
+            {"name": "_owner", "type": "address"},
+            {"name": "_spender", "type": "address"}
+        ],
+        "name": "allowance",
+        "outputs": [{"name": "", "type": "uint256"}],
+        "type": "function"
+    }
+]
 
 
 def load_creator_account_from_env() -> Account:
@@ -283,14 +307,28 @@ class EVMVerifierServiceClient:
         ) as response:
             return await response.json()
     
-    async def authenticate_options(self, attempt_id: str, signature: str) -> Dict[str, Any]:
+    async def authenticate_options(self, attempt_id: str, hunter_account) -> Dict[str, Any]:
         """Get authentication challenges"""
-        # Format request to match server expectations (not using wallet auth middleware)
+        from eth_account.messages import encode_defunct
+        
+        # Create signature for wallet authentication
+        # Sign the attempt_id directly
+        message = encode_defunct(text=attempt_id)
+        signature = hunter_account.sign_message(message)
+        signature_hex = '0x' + signature.signature.hex() if hasattr(signature.signature, 'hex') else '0x' + str(signature.signature)
+        
+        # Create wallet payload
+        wallet_payload = {
+            "attempt_id": attempt_id,
+            "chain_id": CHAIN_ID
+        }
+        # Convert to JSON for sending
+        wallet_payload_json = json.dumps(wallet_payload)
+        
+        # Format request to match wallet auth middleware expectations
         request_payload = {
-            "payload": {
-                "attempt_id": attempt_id,
-                "signature": signature
-            }
+            "encrypted_payload": wallet_payload_json.encode('utf-8').hex(),
+            "signature": signature_hex
         }
 
         async with self.session.post(
@@ -448,6 +486,63 @@ class EVMMoneyPotApp:
         
         print("=" * 50)
     
+    def get_underlying_token_contract(self):
+        """Get the underlying ERC20 token contract"""
+        token_address = self.contract.functions.getTokenAddress().call()
+        return self.w3.eth.contract(
+            address=Web3.to_checksum_address(token_address),
+            abi=ERC20_ABI
+        )
+    
+    async def approve_token_spending(self, account: Account, amount: int, purpose: str):
+        """Approve MoneyPot contract to spend tokens"""
+        print(f"\n💰 Approving token spending for {purpose}")
+        
+        # Get underlying token contract
+        token_contract = self.get_underlying_token_contract()
+        token_address = token_contract.address
+        
+        # Check current allowance
+        current_allowance = token_contract.functions.allowance(
+            account.address,
+            self.contract.address
+        ).call()
+        
+        print(f"   Current allowance: {current_allowance}")
+        print(f"   Required amount: {amount}")
+        
+        if current_allowance >= amount:
+            print(f"✅ Sufficient allowance already exists")
+            return
+        
+        # Build approval transaction
+        nonce = self.w3.eth.get_transaction_count(account.address, 'pending')
+        gas_price = self.w3.eth.gas_price
+        
+        approve_tx = token_contract.functions.approve(
+            self.contract.address,
+            amount
+        ).build_transaction({
+            'from': account.address,
+            'gas': 100000,
+            'gasPrice': gas_price,
+            'nonce': nonce,
+            'chainId': CHAIN_ID
+        })
+        
+        # Sign and send
+        signed_tx = self.w3.eth.account.sign_transaction(approve_tx, account.key)
+        tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        print(f"📝 Approval tx: 0x{tx_hash.hex()}")
+        print(f"🔗 Explorer: {EXPLORER_URL}/tx/0x{tx_hash.hex()}")
+        
+        # Wait for confirmation
+        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        print(f"✅ Approval confirmed in block: {receipt.blockNumber}")
+        
+        if receipt.status == 0:
+            raise RuntimeError("Approval transaction failed")
+    
     async def create_pot_flow(self, amount: int = 1000, duration_seconds: int = 360, fee: int = 100):
         """Complete pot creation and registration flow"""
         print("\n📦 Creating EVM Money Pot")
@@ -456,6 +551,13 @@ class EVMMoneyPotApp:
         # Get next pot ID to avoid conflicts
         next_pot_id = get_next_pot_id(self.contract)
         print(f"📋 Next pot ID: {next_pot_id}")
+        
+        # Approve token spending for pot creation
+        await self.approve_token_spending(
+            self.creator_account,
+            amount,
+            f"pot creation ({amount} tokens)"
+        )
         
         # Build transaction with a fresh nonce
         # We'll use 'pending' to include pending transactions when calculating the nonce
@@ -604,6 +706,17 @@ class EVMMoneyPotApp:
     
     async def _request_attempt(self, pot_id: str) -> int:
         """Request an attempt on the blockchain"""
+        # Get pot info to determine fee
+        pot_info = get_pot_info(self.contract, int(pot_id))
+        fee = pot_info.get('fee', 0)
+
+        # Approve token spending for attempt
+        await self.approve_token_spending(
+            self.hunter_account,
+            fee,
+            f"pot attempt (fee: {fee} tokens)"
+        )
+        
         # Build transaction with a fresh nonce
         # Use 'pending' to include pending transactions
         nonce = self.w3.eth.get_transaction_count(self.hunter_account.address, 'pending')
@@ -647,13 +760,14 @@ class EVMMoneyPotApp:
         """Fail an attempt with wrong solutions"""
         async with self.verifier as verifier:
             # Get authentication challenges
-            from eth_account.messages import encode_defunct
-            message = encode_defunct(text=str(attempt_id))
-            signature = self.hunter_account.sign_message(message)
-            signature_hex = '0x' + signature.signature.hex() if hasattr(signature.signature, 'hex') else '0x' + str(signature.signature)
-            
-            auth_options = await verifier.authenticate_options(str(attempt_id), signature_hex)
+            auth_options = await verifier.authenticate_options(str(attempt_id), self.hunter_account)
             print(f"✅ Got {len(auth_options.get('challenges', []))} challenges")
+            
+            # Extract challenge_id from the response
+            challenge_id = auth_options.get('challenge_id')
+            if not challenge_id:
+                raise RuntimeError("No challenge_id returned from authenticate_options")
+            print(f"✅ Challenge ID: {challenge_id}")
             
             # Generate wrong solutions
             challenges = auth_options.get('challenges', [])
@@ -683,7 +797,7 @@ class EVMMoneyPotApp:
             print(f"❌ Wrong solutions: {wrong_solutions}")
             
             # Verify wrong solutions (should fail)
-            verify_result = await verifier.authenticate_verify(wrong_solutions, str(attempt_id), self.hunter_account)
+            verify_result = await verifier.authenticate_verify(wrong_solutions, challenge_id, self.hunter_account)
             
             if 'error' in verify_result or not verify_result.get('success', False):
                 print(f"✅ Intentional failure achieved!")
@@ -694,13 +808,14 @@ class EVMMoneyPotApp:
         """Succeed an attempt with correct solutions"""
         async with self.verifier as verifier:
             # Get authentication challenges
-            from eth_account.messages import encode_defunct
-            message = encode_defunct(text=str(attempt_id))
-            signature = self.hunter_account.sign_message(message)
-            signature_hex = '0x' + signature.signature.hex() if hasattr(signature.signature, 'hex') else '0x' + str(signature.signature)
-            
-            auth_options = await verifier.authenticate_options(str(attempt_id), signature_hex)
+            auth_options = await verifier.authenticate_options(str(attempt_id), self.hunter_account)
             print(f"✅ Got {len(auth_options.get('challenges', []))} challenges")
+            
+            # Extract challenge_id from the response
+            challenge_id = auth_options.get('challenge_id')
+            if not challenge_id:
+                raise RuntimeError("No challenge_id returned from authenticate_options")
+            print(f"✅ Challenge ID: {challenge_id}")
             
             # Generate correct solutions
             challenges = auth_options.get('challenges', [])
@@ -727,12 +842,13 @@ class EVMMoneyPotApp:
             print(f"✅ Correct solutions: {correct_solutions}")
             
             # Verify correct solutions (should succeed)
-            verify_result = await verifier.authenticate_verify(correct_solutions, str(attempt_id), self.hunter_account)
+            verify_result = await verifier.authenticate_verify(correct_solutions, challenge_id, self.hunter_account)
             
             if verify_result.get('success', False):
                 print(f"🎉 SUCCESS! Attempt with correct solutions succeeded!")
             else:
                 print(f"❌ Unexpected failure with correct solutions!")
+                print("Error: ", verify_result)
     
     async def display_contract_info(self):
         """Display contract information and active pots"""
@@ -771,8 +887,8 @@ class EVMMoneyPotApp:
             creator_native_eth = self.w3.from_wei(creator_native, 'ether')
             hunter_native_eth = self.w3.from_wei(hunter_native, 'ether')
             
-            print(f"Creator Native: {creator_native_eth} CTC")
-            print(f"Hunter Native: {hunter_native_eth} CTC")
+            print(f"Creator Native: {creator_native_eth} ETH")
+            print(f"Hunter Native: {hunter_native_eth} ETH")
             
         except Exception as e:
             print(f"⚠️  Could not get contract info: {e}")
