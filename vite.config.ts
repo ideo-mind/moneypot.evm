@@ -43,6 +43,10 @@ export default defineConfig(({ mode }) => {
         "@shared": path.resolve(__dirname, "./shared"),
       },
     },
+    // optimizeDeps: {
+    //   exclude: ["@web3-onboard"],
+    //   include: ["joi/dist/joi-browser.min.js"],
+    // },
     server: {
       port: parseInt(env.PORT || "3000"),
       host: "0.0.0.0",
