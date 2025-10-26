@@ -1,5 +1,6 @@
 // MoneyPot contract ABI - inline definition to avoid import issues
 import { abi } from "@abis/MoneyPot.json"
+import { INFURA_API_KEY } from "./index"
 
 export const moneyPotABI = abi
 
@@ -36,14 +37,14 @@ export const sepolia = defineChain({
         // "https://ethereum-sepolia-rpc.publicnode.com",
         // "https://rpc.sepolia.org",
         // "https://sepolia.gateway.tenderly.co",
-        "https://sepolia.infura.io/v/3" + INFURA_API_KEY,
+        "https://sepolia.infura.io/v3/" + INFURA_API_KEY,
         // "https://11155111.rpc.hypersync.xyz", //FIXME: hypersync rpc is not workign
         // "https://sepolia.rpc.hypersync.xyz",
       ],
     },
     public: {
       http: [
-        "https://ethereum-sepolia-rpc.publicnode.com",
+        // "https://ethereum-sepolia-rpc.publicnode.com",
         // "https://rpc.sepolia.org",
         "https://sepolia.gateway.tenderly.co",
       ],
