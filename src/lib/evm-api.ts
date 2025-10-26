@@ -17,7 +17,8 @@ import {
   CreatePotParams,
   AttemptPotParams,
 } from "@/abis/evm/money-pot"
-import { Address, erc20Abi } from "viem"
+import { Address, erc20Abi, decodeEventLog } from "viem"
+import { moneyPotABI } from "@/config/viem"
 
 export interface EVMPot {
   id: string
@@ -125,15 +126,20 @@ class EVMContractService {
         args: [account, chainConfig.contractAddress],
       })
 
-      // If allowance is insufficient, approve
+      // If allowance is insufficient, approve max uint256
       if (allowance < amount) {
-        console.log("Insufficient allowance, approving tokens...")
+        console.log("Insufficient allowance, approving max tokens...")
+
+        // Approve max uint256 (2^256 - 1) for best UX - only needs to approve once
+        const maxApproval = BigInt(
+          "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        )
 
         const approveHash = await walletClient.writeContract({
           address: chainConfig.tokenAddress as Address,
           abi: erc20Abi,
           functionName: "approve",
-          args: [chainConfig.contractAddress, amount],
+          args: [chainConfig.contractAddress, maxApproval],
         })
 
         // Wait for approval confirmation
@@ -179,20 +185,38 @@ class EVMContractService {
       const receipt = await publicClient.waitForTransactionReceipt({ hash })
 
       if (receipt.status === "success") {
-        // Extract pot ID from PotCreated event
-        const potCreatedLog = receipt.logs.find(
-          (log) =>
-            log.topics[0] ===
-            "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925" // PotCreated event signature
-        )
+        console.log("Transaction successful, logs:", receipt.logs.length)
 
-        if (potCreatedLog) {
-          const potId = BigInt(potCreatedLog.topics[1])
-          return potId.toString()
+        // Extract pot ID from PotCreated event
+        for (const log of receipt.logs) {
+          try {
+            const decodedEvent = decodeEventLog({
+              abi: moneyPotABI,
+              data: log.data,
+              topics: log.topics,
+            })
+
+            console.log(
+              "Decoded event:",
+              decodedEvent.eventName,
+              decodedEvent.args
+            )
+
+            if (decodedEvent.eventName === "PotCreated") {
+              const potId = decodedEvent.args.id
+              console.log("Pot created with ID:", potId.toString())
+              return potId.toString()
+            }
+          } catch (e) {
+            // Not our event, continue
+            console.log("Failed to decode log:", e)
+          }
         }
+
+        console.error("PotCreated event not found in logs")
       }
 
-      throw new Error("Transaction failed")
+      throw new Error("Transaction failed - PotCreated event not found")
     } catch (error) {
       console.error("Failed to create pot:", error)
       throw error
@@ -233,19 +257,25 @@ class EVMContractService {
 
       if (receipt.status === "success") {
         // Extract attempt ID from PotAttempted event
-        const attemptLog = receipt.logs.find(
-          (log) =>
-            log.topics[0] ===
-            "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925" // PotAttempted event signature
-        )
+        for (const log of receipt.logs) {
+          try {
+            const decodedEvent = decodeEventLog({
+              abi: moneyPotABI,
+              data: log.data,
+              topics: log.topics,
+            })
 
-        if (attemptLog) {
-          const attemptId = BigInt(attemptLog.topics[1])
-          return attemptId.toString()
+            if (decodedEvent.eventName === "PotAttempted") {
+              const attemptId = decodedEvent.args.id
+              return attemptId.toString()
+            }
+          } catch (e) {
+            // Not our event, continue
+          }
         }
       }
 
-      throw new Error("Transaction failed")
+      throw new Error("Transaction failed - PotAttempted event not found")
     } catch (error) {
       console.error("Failed to attempt pot:", error)
       throw error
