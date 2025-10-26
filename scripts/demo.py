@@ -26,6 +26,22 @@ load_dotenv()
 MONEY_AUTH_URL = os.getenv("MONEY_AUTH_URL", "https://auth.money-pot.unreal.art")
 CHAIN_ID = int(os.getenv("CHAIN_ID", "102031"))  # Testnet chain ID
 
+# Helper function to convert float values to wei (smallest unit)
+def parse_token_amount(value: str, decimals: int = 6) -> int:
+    try:
+        # Try to parse as float first (e.g., "0.1", "100.5", "1e3")
+        float_value = float(value)
+        # Convert to wei: multiply by 10^decimals
+        return int(float_value * (10 ** decimals))
+    except ValueError:
+        # If float parsing fails, try as integer (already in wei)
+        return int(value)
+
+# Parse amounts from environment with proper conversion
+# Default values: 0.1 tokens = 100000000000000000 wei, 0.01 tokens = 10000000000000000 wei
+POT_AMOUNT = parse_token_amount(os.getenv("POT_AMOUNT", "1"))
+ENTRY_FEE = parse_token_amount(os.getenv("ENTRY_FEE", "0.1"))
+
 # Dynamic configuration (will be fetched from /chains endpoint)
 EVM_RPC_URL = None
 CONTRACT_ADDRESS = None
@@ -400,6 +416,14 @@ class EVMMoneyPotApp:
         self.password = None
         self.legend = None
     
+    def format_token_amount(self, amount_wei: int) -> str:
+        """Format wei amount to human-readable token amount"""
+        token_amount = amount_wei / (10 ** 18)
+        if token_amount >= 1:
+            return f"{token_amount:.6f}"
+        else:
+            return f"{token_amount:.18f}".rstrip('0').rstrip('.')
+    
     async def initialize(self):
         """Initialize the application"""
         print("🚀 Initializing EVM Money Pot Application...")
@@ -457,7 +481,7 @@ class EVMMoneyPotApp:
             creator_native_balance_eth = self.w3.from_wei(creator_native_balance, 'ether')
             
             print(f"✅ Contract: {contract_name} ({contract_symbol})")
-            print(f"✅ Creator Balance: {creator_balance:,} {contract_symbol}")
+            print(f"✅ Creator Balance: {self.format_token_amount(creator_balance)} {contract_symbol} ({creator_balance:,} units)")
             print(f"✅ Creator Native: {creator_native_balance_eth} CTC")
                 
         except Exception as e:
@@ -508,8 +532,8 @@ class EVMMoneyPotApp:
             self.contract.address
         ).call()
         
-        print(f"   Current allowance: {current_allowance}")
-        print(f"   Required amount: {amount}")
+        print(f"   Current allowance: {self.format_token_amount(current_allowance)} tokens ({current_allowance:,} units)")
+        print(f"   Required amount: {self.format_token_amount(amount)} tokens ({amount:,} units)")
         
         if current_allowance >= amount:
             print(f"✅ Sufficient allowance already exists")
@@ -543,10 +567,23 @@ class EVMMoneyPotApp:
         if receipt.status == 0:
             raise RuntimeError("Approval transaction failed")
     
-    async def create_pot_flow(self, amount: int = 1000, duration_seconds: int = 360, fee: int = 100):
-        """Complete pot creation and registration flow"""
+    async def create_pot_flow(self, amount_wei: int = None, duration_seconds: int = 360, fee_wei: int = None):
+        """Complete pot creation and registration flow
+        
+        Args:
+            amount_wei: Amount in wei (smallest unit). Defaults to POT_AMOUNT from env
+            duration_seconds: Pot duration in seconds
+            fee_wei: Entry fee in wei. Defaults to ENTRY_FEE from env
+        """
+        # Use environment defaults if not specified
+        amount_wei = amount_wei if amount_wei is not None else POT_AMOUNT
+        fee_wei = fee_wei if fee_wei is not None else ENTRY_FEE
+        
         print("\n📦 Creating EVM Money Pot")
         print("-" * 30)
+        print(f"💰 Pot Amount: {self.format_token_amount(amount_wei)} tokens ({amount_wei} wei)")
+        print(f"💸 Entry Fee: {self.format_token_amount(fee_wei)} tokens ({fee_wei} wei)")
+        print(f"⏱️  Duration: {duration_seconds} seconds")
         
         # Get next pot ID to avoid conflicts
         next_pot_id = get_next_pot_id(self.contract)
@@ -555,8 +592,8 @@ class EVMMoneyPotApp:
         # Approve token spending for pot creation
         await self.approve_token_spending(
             self.creator_account,
-            amount,
-            f"pot creation ({amount} tokens)"
+            amount_wei,
+            f"pot creation ({self.format_token_amount(amount_wei)} tokens)"
         )
         
         # Build transaction with a fresh nonce
@@ -568,9 +605,9 @@ class EVMMoneyPotApp:
         print(f"✅ Using nonce: {nonce} for transaction")
 
         transaction = self.contract.functions.createPot(
-            amount,
+            amount_wei,
             duration_seconds,
-            fee,
+            fee_wei,
             self.hunter_account.address  # Use hunter as 1FA address
         ).build_transaction({
             'from': self.creator_account.address,
@@ -863,7 +900,7 @@ class EVMMoneyPotApp:
             
             # Get total supply
             total_supply = self.contract.functions.totalSupply().call()
-            print(f"Total Supply: {total_supply:,} {contract_symbol}")
+            print(f"Total Supply: {self.format_token_amount(total_supply)} {contract_symbol} ({total_supply:,} units)")
             
             # Get active pots
             active_pots = get_active_pots(self.contract)
@@ -877,8 +914,8 @@ class EVMMoneyPotApp:
             creator_balance = self.contract.functions.balanceOf(self.creator_account.address).call()
             hunter_balance = self.contract.functions.balanceOf(self.hunter_account.address).call()
             
-            print(f"Creator Balance: {creator_balance:,} {contract_symbol}")
-            print(f"Hunter Balance: {hunter_balance:,} {contract_symbol}")
+            print(f"Creator Balance: {self.format_token_amount(creator_balance)} {contract_symbol} ({creator_balance:,} units)")
+            print(f"Hunter Balance: {self.format_token_amount(hunter_balance)} {contract_symbol} ({hunter_balance:,} units)")
             
             # Display native balances
             creator_native = self.w3.eth.get_balance(self.creator_account.address)

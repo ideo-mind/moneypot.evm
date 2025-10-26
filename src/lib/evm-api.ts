@@ -57,6 +57,7 @@ class EVMContractService {
   private walletClient: any = null
   public currentChainId: number = 11155111 // Default to Sepolia
   private originalWallet: any = null
+  private hunterSharePercentCache: bigint | null = null // Cache for HUNTER_SHARE_PERCENT constant
 
   setWalletClient(wallet: any, chainId?: number) {
     this.originalWallet = wallet // Store original wallet for chain switching
@@ -102,6 +103,35 @@ class EVMContractService {
       throw new Error("Wallet not connected")
     }
     return this.walletClient
+  }
+
+  // Get HUNTER_SHARE_PERCENT from contract (cached)
+  async getHunterSharePercent(): Promise<bigint> {
+    if (this.hunterSharePercentCache !== null) {
+      return this.hunterSharePercentCache
+    }
+
+    const publicClient = this.getPublicClient(true) // Use public RPC for read
+    const chainConfig = this.getChainConfig()
+
+    try {
+      const hunterSharePercent = await publicClient.readContract({
+        address: chainConfig.contractAddress as Address,
+        abi: moneyPotABI,
+        functionName: "HUNTER_SHARE_PERCENT",
+      })
+
+      this.hunterSharePercentCache = hunterSharePercent as bigint
+      return hunterSharePercent as bigint
+    } catch (error) {
+      console.error(
+        "Failed to read HUNTER_SHARE_PERCENT, using default 90:",
+        error
+      )
+      // Default to 90% if read fails
+      this.hunterSharePercentCache = BigInt(90)
+      return BigInt(90)
+    }
   }
 
   // Check and approve token spending if needed
@@ -535,13 +565,18 @@ class EVMContractService {
     }
   }
 
-  // Transform pot data for UI
-  transformPotData(potData: MoneyPotData): EVMPot {
+  // Transform pot data for UI (async to read HUNTER_SHARE_PERCENT from contract)
+  async transformPotData(potData: MoneyPotData): Promise<EVMPot> {
     const now = new Date()
     const expiresAt = new Date(Number(potData.expiresAt) * 1000)
     const isExpired = now > expiresAt
 
     const timeLeft = isExpired ? "Expired" : this.calculateTimeLeft(expiresAt)
+
+    // Calculate potential reward using HUNTER_SHARE_PERCENT from contract
+    const hunterSharePercent = await this.getHunterSharePercent()
+    const rewardAmount =
+      (potData.totalAmount * hunterSharePercent) / BigInt(100)
 
     return {
       id: potData.id.toString(),
@@ -556,15 +591,11 @@ class EVMContractService {
       title: `Pot #${potData.id}`,
       totalValue: formatTokenAmount(potData.totalAmount, this.currentChainId),
       entryFee: formatTokenAmount(potData.fee, this.currentChainId),
-      potentialReward: formatTokenAmount(
-        potData.totalAmount,
-        this.currentChainId
-      ),
+      potentialReward: formatTokenAmount(rewardAmount, this.currentChainId),
       timeLeft,
       isExpired,
       creatorAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${potData.creator}`,
       creatorUsername: this.formatAddress(potData.creator), // Formatted address for display
-      creatorAddress: potData.creator, // Full address from contract
       difficulty: Math.min(Number(potData.attemptsCount) + 1, 10),
     }
   }

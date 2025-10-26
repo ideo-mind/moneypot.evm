@@ -52,7 +52,9 @@ export const transformEVMPotToPot = (
 
   const totalValue = formatTokenAmount(totalAmount, chainId)
   const entryFee = formatTokenAmount(fee, chainId)
-  const potentialReward = totalValue * 0.4
+  // Note: HUNTER_SHARE_PERCENT from contract is 90%, so reward is 90% of total
+  // This will be updated to read from contract when needed
+  const potentialReward = totalValue * 0.9
 
   let expiresAt: Date
 
