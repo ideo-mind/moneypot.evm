@@ -225,12 +225,33 @@ export const getAuthOptions = async (
   walletAddress: string
 ): Promise<EVMAuthenticateOptions> => {
   try {
+    // If using dummy attempt ID (for fetching colors/directions on page load),
+    // skip API call and return mock data immediately
+    if (attemptId === "dummy") {
+      return {
+        challenges: [],
+        challenge_id: "",
+        colors: {
+          red: "#ef4444",
+          green: "#22c55e",
+          blue: "#3b82f6",
+          yellow: "#eab308",
+        },
+        directions: {
+          up: "U",
+          down: "D",
+          left: "L",
+          right: "R",
+        },
+      }
+    }
+
     // Get the connected wallet to create a signature
     const { getConnectedWallet } = await import("@/lib/web3onboard")
     const wallet = getConnectedWallet()
 
     if (!wallet) {
-      // Return mock data immediately if no wallet connected (common on page load)
+      // Return mock data immediately if no wallet connected
       console.log("No wallet connected, returning mock auth options")
       return {
         challenges: [],

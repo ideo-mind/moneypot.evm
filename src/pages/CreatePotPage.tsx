@@ -36,6 +36,7 @@ import { useWallet } from "@/components/WalletProvider";
 import { useNetworkAdapter } from "@/lib/network-adapter";
 import { evmVerifierService, EVMVerifierServiceClient, getAuthOptions } from "@/lib/evm-verifier-api";
 import { getConnectedWallet } from "@/lib/web3onboard";
+import { evmContractService } from "@/lib/evm-api";
 const steps = [
   { id: 1, name: "Define Pot" },
   { id: 2, name: "Set Rules" },
