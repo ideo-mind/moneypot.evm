@@ -15,6 +15,7 @@ const walletConnect = walletConnectModule({
   projectId: WALLETCONNECT_PROJECT_ID,
   requiredChains: [CHAINS[0].id],
   optionalChains: CHAINS.map((chain) => chain.id),
+  dappUrl: typeof window !== "undefined" ? window.location.origin : "",
 })
 
 // Initialize Coinbase module
