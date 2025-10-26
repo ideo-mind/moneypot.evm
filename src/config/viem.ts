@@ -65,7 +65,7 @@ export const sepolia = defineChain({
   },
   custom: {
     moneypot: {
-      address: "0x03EE9A0211EA332f70b9D30D14a13FD8e465aa43",
+      address: "0xAD6A944623f24CBdbAc60A77825Fe77312949E76",
       abis: moneyPotABI,
       token: {
         address: "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9",
