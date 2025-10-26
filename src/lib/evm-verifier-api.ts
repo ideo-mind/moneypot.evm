@@ -96,7 +96,7 @@ class EVMVerifierServiceClient {
   }
 
   async registerOptions(): Promise<EVMRegisterOptions> {
-    return this.makeRequest<EVMRegisterOptions>("/evm/register/options", "POST")
+    return this.makeRequest<EVMRegisterOptions>("/evm/register/options", "GET")
   }
 
   async registerVerify(
@@ -230,7 +230,24 @@ export const getAuthOptions = async (
     const wallet = getConnectedWallet()
 
     if (!wallet) {
-      throw new Error("No wallet connected")
+      // Return mock data immediately if no wallet connected (common on page load)
+      console.log("No wallet connected, returning mock auth options")
+      return {
+        challenges: [],
+        challenge_id: "",
+        colors: {
+          red: "#ef4444",
+          green: "#22c55e",
+          blue: "#3b82f6",
+          yellow: "#eab308",
+        },
+        directions: {
+          up: "U",
+          down: "D",
+          left: "L",
+          right: "R",
+        },
+      }
     }
 
     // Create a signature for authentication (sign attempt_id directly as per demo.py)

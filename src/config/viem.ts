@@ -39,7 +39,7 @@ export const sepolia = defineChain({
         // "https://ethereum-sepolia-rpc.publicnode.com",
         // "https://rpc.sepolia.org",
         // "https://sepolia.gateway.tenderly.co",
-        "https://sepolia.infura.io/v3/" + INFURA_API_KEY,
+        // "https://sepolia.infura.io/v3/" + INFURA_API_KEY,
         "https://eth-sepolia.g.alchemy.com/v2/" + ALCHEMY_API_KEY,
         // "https://11155111.rpc.hypersync.xyz", //FIXME: hypersync rpc is not workign
         // "https://sepolia.rpc.hypersync.xyz",
@@ -53,7 +53,7 @@ export const sepolia = defineChain({
         "https://0xrpc.io/sep",
 
         // "https://rpc.sepolia.org",
-        "https://sepolia.gateway.tenderly.co",
+        // "https://sepolia.gateway.tenderly.co",
       ],
     },
   },
@@ -116,15 +116,31 @@ export function getDefaultChain(): Chain {
   return sepolia
 }
 
+// RPC rotation index tracker per RPC list (to handle default vs public separately)
+// Uses the first RPC URL as a key to identify the list
+const rpcIndexMap = new Map<string, number>()
+
 /**
- * Randomly select an RPC from the list for load balancing
- * This helps distribute read requests across multiple RPC providers
+ * Select an RPC from the list using round-robin rotation for load balancing
+ * This ensures we use all available RPCs evenly
  */
 export function pickRpc(rpcs: readonly string[]): string {
   if (rpcs.length === 0) {
     throw new Error("No RPC URLs available")
   }
-  return rpcs[Math.floor(Math.random() * rpcs.length)]
+
+  // Use first RPC URL as a key to track this specific RPC list
+  const listKey = rpcs[0]
+
+  // Get current index for this list, or initialize to 0
+  const currentIndex = rpcIndexMap.get(listKey) || 0
+
+  // Select RPC and advance to next index
+  const selectedRpc = rpcs[currentIndex]
+  const nextIndex = (currentIndex + 1) % rpcs.length
+  rpcIndexMap.set(listKey, nextIndex)
+
+  return selectedRpc
 }
 
 /**
@@ -149,7 +165,7 @@ export function getPublicClient(
     rpcs = chain.rpcUrls.public.http
   }
 
-  // Pick a random RPC for load balancing
+  // Pick RPC using round-robin rotation for load balancing
   const selectedRpc = pickRpc(rpcs)
 
   // @ts-expect-error - Chain type compatibility issue with viem

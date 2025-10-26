@@ -90,9 +90,11 @@ class EVMContractService {
     }
   }
 
-  private getPublicClient() {
-    // Use load-balanced public client that randomly selects an RPC
-    return getPublicClient(this.currentChainId)
+  private getPublicClient(readOnly: boolean = true) {
+    // Use load-balanced public client that rotates through all available RPCs
+    // readOnly=true (default) → uses public RPCs for read operations
+    // readOnly=false → uses private RPCs (Infura/Alchemy) for write transactions
+    return getPublicClient(this.currentChainId, readOnly)
   }
 
   private getWalletClient() {
@@ -105,7 +107,7 @@ class EVMContractService {
   // Check and approve token spending if needed
   async ensureTokenApproval(amount: bigint): Promise<void> {
     const walletClient = this.getWalletClient()
-    const publicClient = this.getPublicClient()
+    const publicClient = this.getPublicClient(false) // Use default RPC for writes
     const chainConfig = this.getChainConfig()
 
     if (!chainConfig) {
@@ -155,7 +157,7 @@ class EVMContractService {
   // Create a new pot
   async createPot(params: CreatePotParams): Promise<string> {
     const walletClient = this.getWalletClient()
-    const publicClient = this.getPublicClient()
+    const publicClient = this.getPublicClient(false) // Use default RPC for writes
     const chainConfig = this.getChainConfig()
 
     if (!chainConfig) {
@@ -220,7 +222,7 @@ class EVMContractService {
   // Attempt to solve a pot (returns attempt ID)
   async attemptPot(params: AttemptPotParams): Promise<string> {
     const walletClient = this.getWalletClient()
-    const publicClient = this.getPublicClient()
+    const publicClient = this.getPublicClient(false) // Use default RPC for writes
     const chainConfig = this.getChainConfig()
 
     if (!chainConfig) {
@@ -410,7 +412,7 @@ class EVMContractService {
   // Mark attempt as completed (oracle function)
   async attemptCompleted(attemptId: string, status: boolean): Promise<void> {
     const walletClient = this.getWalletClient()
-    const publicClient = this.getPublicClient()
+    const publicClient = this.getPublicClient(false) // Use default RPC for writes
     const chainConfig = this.getChainConfig()
 
     if (!chainConfig) {
@@ -438,7 +440,7 @@ class EVMContractService {
   // Expire a pot
   async expirePot(potId: string): Promise<void> {
     const walletClient = this.getWalletClient()
-    const publicClient = this.getPublicClient()
+    const publicClient = this.getPublicClient(false) // Use default RPC for writes
     const chainConfig = this.getChainConfig()
 
     if (!chainConfig) {
