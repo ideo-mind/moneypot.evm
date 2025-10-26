@@ -89,6 +89,8 @@ class EVMContractService {
 
   private getPublicClient() {
     const chain = getChain(this.currentChainId)
+    // Use default HTTP RPC (Infura/publicnode) - hypersync doesn't support eth_call
+    // Use the first default HTTP RPC which supports standard JSON-RPC methods
     return createPublicClient({
       chain,
       transport: http(),
