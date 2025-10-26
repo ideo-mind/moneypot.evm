@@ -6,7 +6,7 @@ import { useNetworkAdapter } from "@/lib/network-adapter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Loader2, PartyPopper, ShieldClose, SkipForward, CheckCircle2, XCircle, KeyRound, Zap, Target } from "lucide-react";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import { useBlockscoutTx } from "@/hooks/use-blockscout-tx";
 import { BlockscoutBalance } from "@/components/BlockscoutBalance";
 import { useChainSwitch } from "@/hooks/use-chain-switch";
