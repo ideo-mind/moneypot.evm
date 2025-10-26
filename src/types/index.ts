@@ -17,7 +17,8 @@ export interface Pot {
   timeLeft: string
   isExpired: boolean
   creatorAvatar: string
-  creatorUsername: string
+  creatorUsername: string // Formatted address for display (e.g., "0x1234...5678")
+  creatorAddress: string // Full address from contract
   difficulty: number
 }
 

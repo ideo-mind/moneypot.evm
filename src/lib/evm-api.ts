@@ -458,7 +458,8 @@ class EVMContractService {
       timeLeft,
       isExpired,
       creatorAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${potData.creator}`,
-      creatorUsername: this.formatAddress(potData.creator),
+      creatorUsername: this.formatAddress(potData.creator), // Formatted address for display
+      creatorAddress: potData.creator, // Full address from contract
       difficulty: Math.min(Number(potData.attemptsCount) + 1, 10),
     }
   }

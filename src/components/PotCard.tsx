@@ -59,12 +59,12 @@ export function PotCard({ pot }: PotCardProps) {
         <CardHeader className="flex flex-row items-center justify-between gap-4 p-4 bg-slate-100 dark:bg-slate-900">
           <div className="flex items-center gap-4">
             <Avatar>
-              <AvatarImage src={pot.creatorAvatar} alt={pot.creatorUsername || pot.creator} />
-              <AvatarFallback>{(pot.creatorUsername || pot.creator).charAt(0)}</AvatarFallback>
+              <AvatarImage src={pot.creatorAvatar} alt={pot.creator} />
+              <AvatarFallback>{pot.creator.slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
             <div>
               <CardTitle className="text-lg font-display">{pot.title}</CardTitle>
-              <p className="text-sm text-muted-foreground">by {pot.creatorUsername || pot.creator}</p>
+              <p className="text-sm text-muted-foreground">by {pot.creatorUsername || `${pot.creator.slice(0, 6)}...${pot.creator.slice(-4)}`}</p>
             </div>
           </div>
           {isHot && !pot.isExpired && (
