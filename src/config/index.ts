@@ -9,3 +9,6 @@ export const WALLETCONNECT_PROJECT_ID =
 
 export const INFURA_API_KEY: string =
   (import.meta.env.VITE_INFURA_API_KEY as string) || "INFURA_API_KEY"
+
+export const ALCHEMY_API_KEY: string =
+  (import.meta.env.VITE_ALCHEMY_API_KEY as string) || "ALCHEMY_API_KEY"

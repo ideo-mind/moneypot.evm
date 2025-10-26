@@ -38,6 +38,7 @@ export const sepolia = defineChain({
         // "https://rpc.sepolia.org",
         // "https://sepolia.gateway.tenderly.co",
         "https://sepolia.infura.io/v3/" + INFURA_API_KEY,
+        "https://eth-sepolia.g.alchemy.com/v2/" + ALCHEMY_API_KEY,
         // "https://11155111.rpc.hypersync.xyz", //FIXME: hypersync rpc is not workign
         // "https://sepolia.rpc.hypersync.xyz",
       ],
