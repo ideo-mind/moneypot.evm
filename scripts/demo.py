@@ -26,6 +26,8 @@ load_dotenv()
 MONEY_AUTH_URL = os.getenv("MONEY_AUTH_URL", "https://auth.money-pot.unreal.art")
 CHAIN_ID = int(os.getenv("CHAIN_ID", "102031"))  # Testnet chain ID
 
+
+
 # Helper function to convert float values to wei (smallest unit)
 def parse_token_amount(value: str, decimals: int = 6) -> int:
     try:
@@ -39,8 +41,10 @@ def parse_token_amount(value: str, decimals: int = 6) -> int:
 
 # Parse amounts from environment with proper conversion
 # Default values: 0.1 tokens = 100000000000000000 wei, 0.01 tokens = 10000000000000000 wei
+ONEP_PASSWORD = os.getenv("1P_PASSWORD", "🔥")
 POT_AMOUNT = parse_token_amount(os.getenv("POT_AMOUNT", "1"))
 ENTRY_FEE = parse_token_amount(os.getenv("ENTRY_FEE", "0.1"))
+DURATION = int(os.getenv("DURATION", "3600")) #1 hour 
 
 # Dynamic configuration (will be fetched from /chains endpoint)
 EVM_RPC_URL = None
@@ -498,7 +502,7 @@ class EVMMoneyPotApp:
             self.directions = register_options.get('directions', {})
 
             # Set default password and create legend mapping
-            self.password = "A"  # Default password
+            self.password = ONEP_PASSWORD  # Default password
             self.legend = {
                 "red": self.directions.get("up", "U"),
                 "green": self.directions.get("down", "D"),
@@ -567,23 +571,24 @@ class EVMMoneyPotApp:
         if receipt.status == 0:
             raise RuntimeError("Approval transaction failed")
     
-    async def create_pot_flow(self, amount_wei: int = None, duration_seconds: int = 360, fee_wei: int = None):
+    async def create_pot_flow(self, amount_wei: int = None, duration_seconds: int = None, fee_wei: int = None):
         """Complete pot creation and registration flow
         
         Args:
             amount_wei: Amount in wei (smallest unit). Defaults to POT_AMOUNT from env
-            duration_seconds: Pot duration in seconds
+            duration_seconds: Pot duration in seconds. Defaults to DURATION from env
             fee_wei: Entry fee in wei. Defaults to ENTRY_FEE from env
         """
         # Use environment defaults if not specified
         amount_wei = amount_wei if amount_wei is not None else POT_AMOUNT
         fee_wei = fee_wei if fee_wei is not None else ENTRY_FEE
+        duration_seconds = duration_seconds if duration_seconds is not None else DURATION
         
         print("\n📦 Creating EVM Money Pot")
         print("-" * 30)
         print(f"💰 Pot Amount: {self.format_token_amount(amount_wei)} tokens ({amount_wei} wei)")
         print(f"💸 Entry Fee: {self.format_token_amount(fee_wei)} tokens ({fee_wei} wei)")
-        print(f"⏱️  Duration: {duration_seconds} seconds")
+        print(f"⏱️  Duration: {duration_seconds} seconds ({duration_seconds // 3600}h {duration_seconds % 3600 // 60}m)")
         
         # Get next pot ID to avoid conflicts
         next_pot_id = get_next_pot_id(self.contract)
