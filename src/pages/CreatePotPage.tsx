@@ -7,7 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Wand2, Loader2, Terminal, Eye, EyeOff, Shuffle, Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Wand2, Loader2, Terminal, Eye, EyeOff, Shuffle, Calendar as CalendarIcon, Clock, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { useBlockscoutTx } from "@/hooks/use-blockscout-tx";
@@ -322,6 +322,19 @@ export function CreatePotPage() {
           <h1 className="text-4xl md:text-5xl font-display font-bold">Create a New Money Pot</h1>
           <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">Follow the steps to set up your treasure hunt.</p>
         </div>
+        
+        {/* Wallet Connection Warning */}
+        {!walletState?.isConnected && (
+          <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-900/20">
+            <AlertTitle className="text-amber-800 dark:text-amber-200 flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Connect Your Wallet to Complete Creation
+            </AlertTitle>
+            <AlertDescription className="text-amber-700 dark:text-amber-300 mt-2">
+              You need to connect your EVM wallet to create a pot. You can still configure all the settings below, but you'll need to connect before submitting.
+            </AlertDescription>
+          </Alert>
+        )}
         {!creationSuccess && (
           <>
             <div className="flex justify-between items-center">
@@ -700,7 +713,16 @@ export function CreatePotPage() {
                           )}
                         </ul>
                         <Button onClick={handleCreatePot} disabled={isSubmitting || !walletState.isConnected || !password || Object.keys(colorMap).length < mappableDirections.length} className="w-full bg-brand-green hover:bg-brand-green/90 text-white font-bold text-lg py-6">
-                          {isSubmitting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : `Deposit ${amount} USD & Create Pot`}
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                              Creating Pot...
+                            </>
+                          ) : !walletState.isConnected ? (
+                            "Connect Wallet First"
+                          ) : (
+                            `Deposit ${amount} USD & Create Pot`
+                          )}
                         </Button>
                       </CardContent>
                     </div>
