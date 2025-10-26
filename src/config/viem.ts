@@ -42,11 +42,12 @@ export const sepolia = defineChain({
     },
     public: {
       http: [
-        "https://sepolia.rpc.hypersync.xyz",
-        "https://11155111.rpc.hypersync.xyz",
-        // ABOVE is the best that's what we are going with
-        // "https://rpc.sepolia.org",
-        // "https://ethereum-sepolia-rpc.publicnode.com",
+        // "https://sepolia.rpc.hypersync.xyz",
+        // "https://11155111.rpc.hypersync.xyz",
+        "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
+        "https://sepolia.gateway.tenderly.co",
+        "https://ethereum-sepolia-rpc.publicnode.com",
+        "https://rpc.sepolia.org",
         // "https://sepolia-bor-rpc.publicnode.com",
       ],
     },
@@ -172,7 +173,6 @@ export const wsClient = createPublicClient({
  */
 export const createEVMWalletClient = (account: any, chainId: number) => {
   const chain = getChain(chainId)
-  // @ts-expect-error - Chain type compatibility issue with viem
   return createWalletClient({
     account: account || undefined,
     chain: chain as any,
