@@ -220,32 +220,12 @@ export { EVMVerifierServiceClient }
 export default EVMVerifierServiceClient
 
 // Helper function to get authentication options with colors and directions
+// Used when attempting pots (not creating them)
 export const getAuthOptions = async (
   attemptId: string,
   walletAddress: string
 ): Promise<EVMAuthenticateOptions> => {
   try {
-    // If using dummy attempt ID (for fetching colors/directions on page load),
-    // skip API call and return mock data immediately
-    if (attemptId === "dummy") {
-      return {
-        challenges: [],
-        challenge_id: "",
-        colors: {
-          red: "#ef4444",
-          green: "#22c55e",
-          blue: "#3b82f6",
-          yellow: "#eab308",
-        },
-        directions: {
-          up: "U",
-          down: "D",
-          left: "L",
-          right: "R",
-        },
-      }
-    }
-
     // Get the connected wallet to create a signature
     const { getConnectedWallet } = await import("@/lib/web3onboard")
     const wallet = getConnectedWallet()

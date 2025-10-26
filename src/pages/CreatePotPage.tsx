@@ -34,8 +34,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { useWallet } from "@/components/WalletProvider";
 import { useNetworkAdapter } from "@/lib/network-adapter";
-import { evmVerifierService, EVMVerifierServiceClient, getAuthOptions } from "@/lib/evm-verifier-api";
-import { getConnectedWallet } from "@/lib/web3onboard";
+import { evmVerifierService } from "@/lib/evm-verifier-api";
 import { evmContractService } from "@/lib/evm-api";
 const steps = [
   { id: 1, name: "Define Pot" },
@@ -86,20 +85,27 @@ export function CreatePotPage() {
   useEffect(() => {
     const fetchDynamicData = async () => {
       try {
-        // Use a dummy attempt ID to get the dynamic data
-        const authOptions = await getAuthOptions("dummy", "dummy");
-        setDynamicColors(authOptions.colors || {});
-        setDynamicDirections(authOptions.directions || {});
+        // Use register options to get the dynamic data (this is for creating pots)
+        const registerOptions = await evmVerifierService.registerOptions();
         
-        // Extract mappable directions (exclude skip)
-        const directions = Object.values(authOptions.directions || {});
-        setMappableDirections(directions.filter(dir => dir.toLowerCase() !== 'skip'));
+        // Set all colors and directions from backend (including skip)
+        setDynamicColors(registerOptions.colors || {});
+        setDynamicDirections(registerOptions.directions || {});
         
-        // Initialize color map with dynamic colors
+        // Extract only directions that are NOT skip (for mapping colors)
+        const allDirections = Object.entries(registerOptions.directions || {});
+        const mappableDirections = allDirections
+          .filter(([key]) => key.toLowerCase() !== 'skip')
+          .map(([_, value]) => value as string);
+        
+        setMappableDirections(mappableDirections);
+        
+        // Initialize color map: assign first N colors to first N directions (excluding skip)
         const initialColorMap: Record<string, string> = {};
-        Object.keys(authOptions.colors || {}).forEach((color, index) => {
-          if (index < directions.length) {
-            initialColorMap[color] = directions[index];
+        const colorKeys = Object.keys(registerOptions.colors || {});
+        colorKeys.forEach((color, index) => {
+          if (index < mappableDirections.length) {
+            initialColorMap[color] = mappableDirections[index];
           }
         });
         setColorMap(initialColorMap);
@@ -116,8 +122,7 @@ export function CreatePotPage() {
           up: "U",
           down: "D", 
           left: "L",
-          right: "R",
-          skip: "S"
+          right: "R"
         });
         setMappableDirections(["U", "D", "L", "R"]);
       }
@@ -279,41 +284,7 @@ export function CreatePotPage() {
     // Update transaction with hash (we'll need to get this from the contract service)
     updateTransaction(txId, { hash: potId }); // Using potId as hash for now
     
-    showPendingToast("Registering Pot", "Registering pot with verifier...", "");
-    
-    // Register with EVM verifier service
-    const timestamp = Math.floor(Date.now() / 1000);
-    const payload = {
-      pot_id: potId,
-      "1p": password,
-      legend: colorMap,
-      iat: timestamp,
-      iss: walletState!.address!,
-      exp: timestamp + 3600, // 1 hour
-      chain_id: evmContractService.currentChainId || 11155111,
-    };
-
-    // Get encryption key
-    const { public_key } = await evmVerifierService.registerOptions();
-    
-    // Create signature - sign the payload JSON string (matching demo.py format)
-    const payloadJson = JSON.stringify(payload, null, 0).replace(/\s/g, ""); // Compact JSON format
-    const evmWallet = getConnectedWallet();
-    if (!evmWallet) {
-      throw new Error('No EVM wallet connected');
-    }
-    
-    const signature = await EVMVerifierServiceClient.createEVMSignature(evmWallet, payloadJson);
-    
-    // Encrypt the signed payload as hex
-    const encryptedPayload = Buffer.from(payloadJson, "utf-8").toString("hex");
-
-    // Register with verifier
-    await evmVerifierService.registerVerify(
-      encryptedPayload,
-      public_key,
-      signature
-    );
+    // Registration with verifier service is already handled by adapter.client.createPot()
     
     // Fetch the created pot from blockchain
     const potData = await adapter.client.getPot(potId);
@@ -321,11 +292,10 @@ export function CreatePotPage() {
       throw new Error('Failed to fetch created pot');
     }
     
-    const newPot = transformEVMPotToPot(potData);
+    const newPot = transformEVMPotToPot(potData, evmContractService.currentChainId || 11155111);
     addEVMPot(newPot);
     
-    // Refresh the pots list
-    await fetchEVMPots(true);
+    // Note: fetchEVMPots is not needed here since addEVMPot already updates the store
     
     // Update transaction as successful
     updateTransaction(txId, { 
