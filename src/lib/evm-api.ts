@@ -1,8 +1,8 @@
 import {
   publicClient,
   createEVMWalletClient,
-  parseCTC,
-  formatCTC,
+  parseETH,
+  formatETH,
   getChain,
 } from "@/config/viem"
 import {
@@ -51,7 +51,7 @@ export interface EVMTransaction {
 
 class EVMContractService {
   private walletClient: any = null
-  private currentChainId: number = 102031 // Default to Creditcoin Testnet
+  private currentChainId: number = 11155111 // Default to Sepolia
 
   setWalletClient(account: any, chainId?: number) {
     this.walletClient = createEVMWalletClient(
@@ -240,7 +240,7 @@ class EVMContractService {
         args: [address],
       })
 
-      return Number(result) / 10 ** 6 // USDC has 6 decimals
+      return Number(result) / 10 ** 6 // PYUSD has 6 decimals
     } catch (error) {
       console.error("Failed to get balance:", error)
       return 0

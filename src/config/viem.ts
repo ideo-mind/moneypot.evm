@@ -17,46 +17,7 @@ import {
 // Export Chain type for use in other config files
 export { type Chain } from "viem"
 
-// Creditcoin EVM Testnet Configuration - Hardcoded values
-export const creditcoinTestnet = defineChain({
-  id: 102031,
-  name: "Creditcoin Testnet",
-  nativeCurrency: {
-    decimals: 18,
-    name: "Creditcoin",
-    symbol: "CTC",
-  },
-  rpcUrls: {
-    default: {
-      http: ["https://rpc.cc3-testnet.creditcoin.network"],
-      webSocket: ["wss://rpc.cc3-testnet.creditcoin.network"],
-    },
-    public: {
-      http: ["https://rpc.cc3-testnet.creditcoin.network"],
-      webSocket: ["wss://rpc.cc3-testnet.creditcoin.network"],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "Creditcoin Explorer",
-      url: "https://creditcoin-testnet.blockscout.com",
-    },
-  },
-  custom: {
-    moneypot: {
-      address: "0xB51Da34a5a405bC9e7e3733fCe9A2AEf9871590d",
-      abis: moneyPotABI,
-      token: {
-        address: "0xB51Da34a5a405bC9e7e3733fCe9A2AEf9871590d",
-        symbol: "USDC",
-        name: "Money Pot",
-        decimals: 6,
-        abis: moneyPotABI,
-      },
-    },
-  },
-  testnet: true,
-})
+// Sepolia Testnet Configuration - Single supported chain
 
 export const sepolia = defineChain({
   id: 11155111,
@@ -117,15 +78,15 @@ export const sepolia = defineChain({
 
 // Simple hardcoded chains - Sepolia first as default
 
-// Simple hardcoded chains array - Sepolia first as default
-export const CHAINS = [sepolia, creditcoinTestnet]
+// Single supported chain
+export const CHAINS = [sepolia]
 
-// Simple default chain - Sepolia
+// Default chain - Sepolia
 export const CHAIN_DEFAULT = sepolia
 
 /**
  * Get a Chain definition by chainId.
- * @param chainId EVM chain id (e.g., 102031 Creditcoin, 11155111 Sepolia)
+ * @param chainId EVM chain id (11155111 Sepolia)
  * @returns Chain or throws error if not supported
  */
 export function getChain(chainId: number): Chain {
@@ -172,8 +133,7 @@ export function getPublicClient(
     rpcs = chain.rpcUrls.public.http
   }
 
-  // Create new public client with random RPC
-  // @ts-ignore - Chain type compatibility issue with viem
+  // @ts-expect-error - Chain type compatibility issue with viem
   return createPublicClient({
     chain: chain as any,
     transport: http(pickRpc(rpcs)),
@@ -189,12 +149,12 @@ export function getDefaultPublicClient(): PublicClient {
 
 // Legacy exports for backward compatibility (deprecated)
 export const publicClient = createPublicClient({
-  chain: creditcoinTestnet,
+  chain: sepolia,
   transport: http(),
 })
 
 export const wsClient = createPublicClient({
-  chain: creditcoinTestnet,
+  chain: sepolia,
   transport: webSocket(),
 })
 
@@ -206,7 +166,7 @@ export const wsClient = createPublicClient({
  */
 export const createEVMWalletClient = (account: any, chainId: number) => {
   const chain = getChain(chainId)
-  // @ts-ignore - Chain type compatibility issue with viem
+  // @ts-expect-error - Chain type compatibility issue with viem
   return createWalletClient({
     account: account || undefined,
     chain: chain as any,
@@ -219,12 +179,12 @@ export const formatEVMAddress = (address: string) => {
   return `${address.slice(0, 6)}...${address.slice(-4)}`
 }
 
-// Helper function to convert wei to CTC
-export const formatCTC = (wei: bigint) => {
+// Helper function to convert wei to ETH
+export const formatETH = (wei: bigint) => {
   return Number(wei) / 10 ** 18
 }
 
-// Helper function to convert CTC to wei
-export const parseCTC = (ctc: number) => {
-  return BigInt(Math.floor(ctc * 10 ** 18))
+// Helper function to convert ETH to wei
+export const parseETH = (eth: number) => {
+  return BigInt(Math.floor(eth * 10 ** 18))
 }

@@ -7,7 +7,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { formatCTC, publicClient } from '@/config/viem';
+import { formatETH, publicClient } from '@/config/viem';
 import { evmContractService } from '@/lib/evm-api';
 import { getConnectedWallet, switchNetwork, addNetwork } from '@/lib/web3onboard';
 import { AlertTriangle, ChevronDown, Coins, Copy, LogOut, Wallet, Wifi } from 'lucide-react';
@@ -78,28 +78,28 @@ export function WalletConnectButton() {
       if (walletState.isConnected && walletState.address) {
         setBalances(prev => ({ ...prev, loading: true }));
         try {
-          // Get CTC balance
-          let ctcBalance = 0;
+          // Get ETH balance
+          let ethBalance = 0;
           try {
             const balance = await publicClient.getBalance({
               address: walletState.address as `0x${string}`,
             });
-            ctcBalance = formatCTC(balance);
+            ethBalance = formatETH(balance);
           } catch (error) {
-            console.error('Failed to fetch CTC balance:', error);
+            console.error('Failed to fetch ETH balance:', error);
           }
 
-          // Get USDC balance from contract
+          // Get PYUSD balance from contract
           let usdcBalance = 0;
           try {
             usdcBalance = await evmContractService.getBalance(walletState.address as `0x${string}`);
           } catch (error) {
-            console.error('Failed to fetch USDC balance:', error);
+            console.error('Failed to fetch PYUSD balance:', error);
           }
 
           setBalances({
             usdc: usdcBalance,
-            ctc: ctcBalance,
+            eth: ethBalance,
             loading: false
           });
         } catch (error) {
@@ -233,11 +233,11 @@ export function WalletConnectButton() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-xs">
                     <Coins className="w-3 h-3 text-purple-500" />
-                    <span>CTC: {typeof balances.ctc === 'number' ? balances.ctc.toFixed(4) : '0.0000'}</span>
+                    <span>ETH: {typeof balances.eth === 'number' ? balances.eth.toFixed(4) : '0.0000'}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
                     <Coins className="w-3 h-3 text-blue-500" />
-                    <span>USDC: {typeof balances.usdc === 'number' ? balances.usdc.toFixed(2) : '0.00'}</span>
+                    <span>PYUSD: {typeof balances.usdc === 'number' ? balances.usdc.toFixed(2) : '0.00'}</span>
                   </div>
                 </div>
               )}
