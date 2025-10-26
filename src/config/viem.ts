@@ -7,7 +7,6 @@ import {
   createPublicClient,
   createWalletClient,
   http,
-  webSocket,
   defineChain,
   Chain,
   PublicClient,
@@ -33,22 +32,20 @@ export const sepolia = defineChain({
   rpcUrls: {
     default: {
       http: [
+        // "https://ethereum-sepolia-rpc.publicnode.com",
+        // "https://rpc.sepolia.org",
+        "https://sepolia.gateway.tenderly.co",
         "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
-        "https://ethereum-sepolia-rpc.publicnode.com",
-      ],
-      webSocket: [
-        "wss://sepolia.infura.io/ws/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
+        // "https://11155111.rpc.hypersync.xyz", //FIXME: hypersync rpc is not workign
+        // "https://sepolia.rpc.hypersync.xyz",
       ],
     },
     public: {
       http: [
-        // "https://sepolia.rpc.hypersync.xyz",
-        // "https://11155111.rpc.hypersync.xyz",
-        "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
-        "https://sepolia.gateway.tenderly.co",
         "https://ethereum-sepolia-rpc.publicnode.com",
         "https://rpc.sepolia.org",
-        // "https://sepolia-bor-rpc.publicnode.com",
+        "https://sepolia.gateway.tenderly.co",
+        "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
       ],
     },
   },
@@ -113,8 +110,12 @@ export function getDefaultChain(): Chain {
 
 /**
  * Randomly select an RPC from the list for load balancing
+ * This helps distribute read requests across multiple RPC providers
  */
-export function pickRpc(rpcs: readonly string[]) {
+export function pickRpc(rpcs: readonly string[]): string {
+  if (rpcs.length === 0) {
+    throw new Error("No RPC URLs available")
+  }
   return rpcs[Math.floor(Math.random() * rpcs.length)]
 }
 
@@ -140,10 +141,13 @@ export function getPublicClient(
     rpcs = chain.rpcUrls.public.http
   }
 
+  // Pick a random RPC for load balancing
+  const selectedRpc = pickRpc(rpcs)
+
   // @ts-expect-error - Chain type compatibility issue with viem
   return createPublicClient({
     chain: chain as any,
-    transport: http(pickRpc(rpcs)),
+    transport: http(selectedRpc),
   })
 }
 
@@ -155,15 +159,28 @@ export function getDefaultPublicClient(): PublicClient {
 }
 
 // Legacy exports for backward compatibility (deprecated)
-export const publicClient = createPublicClient({
-  chain: sepolia,
-  transport: http(),
+// Note: These clients use a random RPC for load balancing
+// Lazy initialization to avoid module initialization errors
+let _publicClient: PublicClient | null = null
+
+export const publicClient = new Proxy({} as PublicClient, {
+  get(target, prop) {
+    if (!_publicClient) {
+      const rpcUrl = sepolia.rpcUrls.default.http[0] // Use first RPC for legacy client
+      _publicClient = createPublicClient({
+        chain: sepolia,
+        transport: http(rpcUrl),
+      })
+    }
+    return (_publicClient as any)[prop]
+  },
 })
 
-export const wsClient = createPublicClient({
-  chain: sepolia,
-  transport: webSocket(),
-})
+// WebSocket client removed - not used and requires websocket RPC URL
+// export const wsClient = createPublicClient({
+//   chain: sepolia,
+//   transport: webSocket(),
+// })
 
 /**
  * Helper function to create chain-specific wallet client
@@ -173,10 +190,12 @@ export const wsClient = createPublicClient({
  */
 export const createEVMWalletClient = (account: any, chainId: number) => {
   const chain = getChain(chainId)
+  // Use random RPC for load balancing
+  const rpcUrl = pickRpc(chain.rpcUrls.default.http)
   return createWalletClient({
     account: account || undefined,
     chain: chain as any,
-    transport: http(),
+    transport: http(rpcUrl),
   })
 }
 

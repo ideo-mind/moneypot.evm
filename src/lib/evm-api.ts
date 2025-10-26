@@ -4,6 +4,7 @@ import {
   parseETH,
   formatETH,
   getChain,
+  getPublicClient,
 } from "@/config/viem"
 import {
   contractFunctions,
@@ -14,7 +15,7 @@ import {
   CreatePotParams,
   AttemptPotParams,
 } from "@/abis/evm/money-pot"
-import { Address, createPublicClient, createWalletClient, http } from "viem"
+import { Address } from "viem"
 
 export interface EVMPot {
   id: string
@@ -88,13 +89,8 @@ class EVMContractService {
   }
 
   private getPublicClient() {
-    const chain = getChain(this.currentChainId)
-    // Use default HTTP RPC (Infura/publicnode) - hypersync doesn't support eth_call
-    // Use the first default HTTP RPC which supports standard JSON-RPC methods
-    return createPublicClient({
-      chain,
-      transport: http(),
-    })
+    // Use load-balanced public client that randomly selects an RPC
+    return getPublicClient(this.currentChainId)
   }
 
   private getWalletClient() {

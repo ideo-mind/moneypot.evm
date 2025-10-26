@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "") // Loads all env vars, not just VITE_
 
   return {
+    define: {
+      global: "globalThis",
+      "process.env": {},
+    },
     plugins: [
       react(),
       {
@@ -41,12 +45,17 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
         "@abis": path.resolve(__dirname, "./src/abis"),
         "@shared": path.resolve(__dirname, "./shared"),
+        buffer: "buffer",
       },
     },
-    // optimizeDeps: {
-    //   exclude: ["@web3-onboard"],
-    //   include: ["joi/dist/joi-browser.min.js"],
-    // },
+    optimizeDeps: {
+      include: ["buffer"],
+      esbuildOptions: {
+        define: {
+          global: "globalThis",
+        },
+      },
+    },
     server: {
       port: parseInt(env.PORT || "3000"),
       host: "0.0.0.0",
