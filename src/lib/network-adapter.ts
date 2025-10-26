@@ -63,7 +63,7 @@ class NetworkAdapter {
       const wallet = getConnectedWallet()
       if (wallet) {
         evmContractService.setWalletClient(
-          wallet.accounts[0],
+          wallet, // Pass the entire wallet object
           this.currentChainId
         )
       }
@@ -152,7 +152,7 @@ export const useNetworkAdapter = () => {
   const { walletState } = useWallet()
   const evmStore = useEVMPotStore()
 
-  const adapter = new NetworkAdapter()
+  const adapter = React.useMemo(() => new NetworkAdapter(), [])
 
   // Initialize chain manager and set wallet info when wallet state changes
   React.useEffect(() => {
@@ -165,7 +165,7 @@ export const useNetworkAdapter = () => {
     }
 
     initializeAdapter()
-  }, [walletState])
+  }, [walletState, adapter])
 
   return { adapter }
 }

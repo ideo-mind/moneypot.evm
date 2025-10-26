@@ -7,6 +7,7 @@ import {
   createPublicClient,
   createWalletClient,
   http,
+  custom,
   defineChain,
   Chain,
   PublicClient,
@@ -163,14 +164,19 @@ export function getDefaultPublicClient(): PublicClient {
 // Lazy initialization to avoid module initialization errors
 let _publicClient: PublicClient | null = null
 
+// @ts-ignore - viem type compatibility issue
+const createLegacyPublicClient = () => {
+  const rpcUrl = sepolia.rpcUrls.default.http[0] // Use first RPC for legacy client
+  return createPublicClient({
+    chain: sepolia as any,
+    transport: http(rpcUrl),
+  }) as PublicClient
+}
+
 export const publicClient = new Proxy({} as PublicClient, {
   get(target, prop) {
     if (!_publicClient) {
-      const rpcUrl = sepolia.rpcUrls.default.http[0] // Use first RPC for legacy client
-      _publicClient = createPublicClient({
-        chain: sepolia,
-        transport: http(rpcUrl),
-      })
+      _publicClient = createLegacyPublicClient()
     }
     return (_publicClient as any)[prop]
   },
@@ -184,18 +190,27 @@ export const publicClient = new Proxy({} as PublicClient, {
 
 /**
  * Helper function to create chain-specific wallet client
- * @param account Wallet account
+ * @param wallet Web3Onboard wallet object
  * @param chainId EVM chain id
  * @returns WalletClient instance
  */
-export const createEVMWalletClient = (account: any, chainId: number) => {
+export const createEVMWalletClient = (wallet: any, chainId: number) => {
   const chain = getChain(chainId)
-  // Use random RPC for load balancing
-  const rpcUrl = pickRpc(chain.rpcUrls.default.http)
+
+  if (
+    !wallet ||
+    !wallet.provider ||
+    !wallet.accounts ||
+    wallet.accounts.length === 0
+  ) {
+    throw new Error("Invalid wallet: provider and accounts required")
+  }
+
+  // Create a custom transport using the wallet's provider
   return createWalletClient({
-    account: account || undefined,
+    account: wallet.accounts[0].address,
     chain: chain as any,
-    transport: http(rpcUrl),
+    transport: custom(wallet.provider),
   })
 }
 

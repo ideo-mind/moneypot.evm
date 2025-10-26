@@ -1,5 +1,6 @@
 import { getConnectedWallet, onboard } from '@/lib/web3onboard';
 import { PropsWithChildren, createContext, useContext, useEffect, useState } from 'react';
+import { evmContractService } from '@/lib/evm-api';
 
 // Wallet types - only EVM now
 export type WalletType = 'evm';
@@ -36,6 +37,10 @@ export const WalletProvider = ({ children }: PropsWithChildren) => {
       const evmWallet = getConnectedWallet()
       if (evmWallet && evmWallet.accounts.length > 0) {
         const account = evmWallet.accounts[0]
+        
+        // Set wallet client in contract service
+        evmContractService.setWalletClient(evmWallet)
+        
         setWalletState({
           type: 'evm',
           address: account.address,

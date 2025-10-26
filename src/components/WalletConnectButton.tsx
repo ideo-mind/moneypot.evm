@@ -17,7 +17,7 @@ import { useChainSwitch } from '@/hooks/use-chain-switch';
 
 interface WalletBalances {
   usdc: number | null;
-  ctc: number | null;
+  eth: number | null;
   loading: boolean;
 }
 
@@ -26,7 +26,7 @@ export function WalletConnectButton() {
   const { currentChain } = useChainSwitch();
   const [balances, setBalances] = useState<WalletBalances>({
     usdc: null,
-    ctc: null,
+    eth: null,
     loading: false
   });
   const [isWrongNetwork, setIsWrongNetwork] = useState(false);
@@ -108,7 +108,7 @@ export function WalletConnectButton() {
           console.error('Failed to fetch balances:', error);
           setBalances({
             usdc: null,
-            ctc: null,
+            eth: null,
             loading: false
           });
         }

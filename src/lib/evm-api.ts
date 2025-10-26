@@ -53,10 +53,12 @@ export interface EVMTransaction {
 class EVMContractService {
   private walletClient: any = null
   private currentChainId: number = 11155111 // Default to Sepolia
+  private originalWallet: any = null
 
-  setWalletClient(account: any, chainId?: number) {
+  setWalletClient(wallet: any, chainId?: number) {
+    this.originalWallet = wallet // Store original wallet for chain switching
     this.walletClient = createEVMWalletClient(
-      account,
+      wallet,
       chainId || this.currentChainId
     )
     if (chainId) {
@@ -67,11 +69,8 @@ class EVMContractService {
   setChainId(chainId: number) {
     this.currentChainId = chainId
     // Recreate wallet client with new chain if wallet is connected
-    if (this.walletClient) {
-      this.walletClient = createEVMWalletClient(
-        this.walletClient.account,
-        chainId
-      )
+    if (this.originalWallet) {
+      this.walletClient = createEVMWalletClient(this.originalWallet, chainId)
     }
   }
 
