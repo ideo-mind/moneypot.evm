@@ -5,13 +5,14 @@ import coinbaseModule from "@web3-onboard/coinbase"
 import metamaskModule from "@web3-onboard/metamask"
 import { CHAINS, CHAIN_DEFAULT } from "@/config/viem"
 import { toHex } from "viem"
+import { WALLETCONNECT_PROJECT_ID } from "@/config"
 
 // Initialize the injected wallets module
 const injected = injectedModule()
 
 // Initialize WalletConnect module
 const walletConnect = walletConnectModule({
-  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || "your-project-id",
+  projectId: WALLETCONNECT_PROJECT_ID,
   requiredChains: [CHAINS[0].id],
   optionalChains: CHAINS.map((chain) => chain.id),
 })
