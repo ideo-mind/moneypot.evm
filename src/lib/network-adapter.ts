@@ -35,7 +35,7 @@ export interface NetworkClient {
   getPot(potId: string): Promise<any>
   getActivePots(): Promise<string[]>
   getAllPots(): Promise<string[]>
-  expirePot(potId: string): Promise<boolean>
+  expirePot(potId: string): Promise<string>
 }
 
 class NetworkAdapter {
@@ -182,13 +182,12 @@ class EVMClient implements NetworkClient {
     return evmContractService.getPots()
   }
 
-  async expirePot(potId: string): Promise<boolean> {
+  async expirePot(potId: string): Promise<string> {
     try {
-      await evmContractService.expirePot(potId)
-      return true
+      return await evmContractService.expirePot(potId)
     } catch (error) {
       console.error("Failed to expire pot:", error)
-      return false
+      throw error
     }
   }
 }

@@ -24,14 +24,20 @@ export function PotCard({ pot }: PotCardProps) {
   
   const isHot = parseInt(pot.attempts_count) > 10;
   const expirePot = useEVMPotStore((state) => state.expirePot);
-  const { showSuccessToast, showErrorToast } = useBlockscoutTx();
+  const { showSuccessToast, showErrorToast, showTransactionToast } = useBlockscoutTx();
   const [isExpiring, setIsExpiring] = useState(false);
   
   const handleExpirePot = async () => {
     setIsExpiring(true);
     try {
       // Submit blockchain transaction
-      await evmContractService.expirePot(pot.id);
+      const txHash = await evmContractService.expirePot(pot.id);
+      
+      // Show Blockscout transaction toast
+      showTransactionToast(txHash, {
+        type: 'expire_pot',
+        potId: pot.id,
+      });
       
       // Update local state
       const success = await expirePot(pot.id);

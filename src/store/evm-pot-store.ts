@@ -359,9 +359,7 @@ export const useEVMPotStore = create<EVMPotState>((set, get) => ({
 
   expirePot: async (potId: string) => {
     try {
-      await evmContractService.expirePot(potId)
-
-      // Update local state
+      // Transaction already completed in PotCard, just update local state
       set((state) => {
         const pot = state.pots[potId]
         if (pot) {
@@ -378,7 +376,10 @@ export const useEVMPotStore = create<EVMPotState>((set, get) => ({
 
       return true
     } catch (error) {
-      console.error("Failed to expire EVM pot:", error)
+      console.error(
+        "Failed to update local state after expiring EVM pot:",
+        error
+      )
       return false
     }
   },

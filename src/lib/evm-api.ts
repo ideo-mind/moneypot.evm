@@ -492,7 +492,7 @@ class EVMContractService {
   }
 
   // Expire a pot
-  async expirePot(potId: string): Promise<void> {
+  async expirePot(potId: string): Promise<string> {
     const walletClient = this.getWalletClient()
     const publicClient = this.getPublicClient(false) // Use default RPC for writes
     const chainConfig = this.getChainConfig()
@@ -513,6 +513,7 @@ class EVMContractService {
 
       // Wait for transaction confirmation
       await publicClient.waitForTransactionReceipt({ hash })
+      return hash
     } catch (error) {
       console.error("Failed to expire pot:", error)
       throw error
