@@ -46,14 +46,18 @@ export default defineConfig(({ mode }) => {
         "@abis": path.resolve(__dirname, "./src/abis"),
         "@shared": path.resolve(__dirname, "./shared"),
         buffer: "buffer",
+        "rxjs": path.resolve(__dirname, "./node_modules/rxjs"),
       },
+      dedupe: ["react", "react-dom", "rxjs"],
     },
     optimizeDeps: {
       include: ["buffer"],
+      exclude: ["@coinbase/wallet-sdk", "@reown/appkit", "rxjs"],
       esbuildOptions: {
         define: {
           global: "globalThis",
         },
+        mainFields: ["module", "main"],
       },
     },
     server: {
@@ -63,6 +67,15 @@ export default defineConfig(({ mode }) => {
     preview: {
       port: parseInt(env.PORT || "4173"),
       host: "0.0.0.0",
+    },
+    build: {
+      commonjsOptions: {
+        include: [/node_modules/],
+        transformMixedEsModules: true,
+      },
+      rollupOptions: {
+        external: ["@reown/appkit/core", "@coinbase/wallet-sdk"],
+      },
     },
   }
 })
