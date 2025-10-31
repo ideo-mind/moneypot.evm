@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { CHAINS, CHAIN_DEFAULT } from '@/config/viem';
 import { useNetworkAdapter } from '@/lib/network-adapter';
+import { ensureWalletOnChain } from '@/lib/web3onboard';
 
 const LAST_CHAIN_KEY = 'evm-last-chain-id'
 
@@ -39,6 +40,14 @@ export function NetworkSelector() {
 
   const handleChainSwitch = async (chainId: number) => {
     try {
+      // Attempt to switch the connected wallet network first (if any)
+      try {
+        await ensureWalletOnChain(chainId)
+      } catch (e) {
+        // Non-fatal: user may not have a wallet connected yet or rejected
+        console.warn('Wallet network switch skipped or failed:', e)
+      }
+
       adapter.setChainId(chainId);
       setCurrentChainId(chainId);
       try {
@@ -47,7 +56,6 @@ export function NetworkSelector() {
       if (walletState?.type === 'evm') {
         console.log(`Switching to chain ${chainId}`);
       }
-      // Hard reload to ensure full isolation, but keep saved chain selection
       window.location.reload();
     } catch (error) {
       console.error('Failed to switch chain:', error);
