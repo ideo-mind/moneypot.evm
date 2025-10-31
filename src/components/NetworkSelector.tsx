@@ -12,10 +12,26 @@ import {
 import { CHAINS, CHAIN_DEFAULT } from '@/config/viem';
 import { useNetworkAdapter } from '@/lib/network-adapter';
 
+const LAST_CHAIN_KEY = 'evm-last-chain-id'
+
 export function NetworkSelector() {
   const { walletState } = useWallet();
   const { adapter } = useNetworkAdapter();
   const [currentChainId, setCurrentChainId] = useState<number>(CHAIN_DEFAULT.id);
+
+  // Restore saved chain on mount
+  React.useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(LAST_CHAIN_KEY)
+      if (saved) {
+        const savedId = parseInt(saved, 10)
+        if (!Number.isNaN(savedId)) {
+          setCurrentChainId(savedId)
+          adapter.setChainId(savedId)
+        }
+      }
+    } catch {}
+  }, [adapter])
 
   const getCurrentChain = () => {
     return CHAINS.find(chain => chain.id === currentChainId) || CHAINS[0];
@@ -25,12 +41,13 @@ export function NetworkSelector() {
     try {
       adapter.setChainId(chainId);
       setCurrentChainId(chainId);
-
+      try {
+        window.localStorage.setItem(LAST_CHAIN_KEY, String(chainId))
+      } catch {}
       if (walletState?.type === 'evm') {
         console.log(`Switching to chain ${chainId}`);
       }
-      // Force reload window and clear storage to avoid cross-chain data collision
-      window.localStorage.clear();
+      // Hard reload to ensure full isolation, but keep saved chain selection
       window.location.reload();
     } catch (error) {
       console.error('Failed to switch chain:', error);

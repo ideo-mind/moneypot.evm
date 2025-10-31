@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from "react"
 import { CHAINS, CHAIN_DEFAULT, getChain, Chain } from "@/config/viem"
 
+const LAST_CHAIN_KEY = 'evm-last-chain-id'
+
 export interface ChainSwitchState {
   currentChain: Chain
   isSwitching: boolean
@@ -15,6 +17,16 @@ export const useChainSwitch = () => {
   })
 
   useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(LAST_CHAIN_KEY)
+      if (saved) {
+        const savedId = parseInt(saved, 10)
+        if (!Number.isNaN(savedId)) {
+          setState((prev) => ({ ...prev, currentChain: getChain(savedId) }))
+          return
+        }
+      }
+    } catch {}
     setState((prev) => ({
       ...prev,
       currentChain: CHAIN_DEFAULT,
@@ -29,13 +41,15 @@ export const useChainSwitch = () => {
     }))
     try {
       const nextChain = getChain(chainId)
+      try {
+        window.localStorage.setItem(LAST_CHAIN_KEY, String(chainId))
+      } catch {}
       setState((prev) => ({
         ...prev,
         currentChain: nextChain,
         isSwitching: false,
         error: null,
       }))
-      window.localStorage.clear()
       window.location.reload()
       return true
     } catch (error) {

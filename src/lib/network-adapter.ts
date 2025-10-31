@@ -38,6 +38,8 @@ export interface NetworkClient {
   expirePot(potId: string): Promise<string>
 }
 
+const LAST_CHAIN_KEY = 'evm-last-chain-id'
+
 class NetworkAdapter {
   private walletType: string | null = null
   private walletAddress: string | null = null
@@ -49,7 +51,18 @@ class NetworkAdapter {
   }
 
   async initialize(): Promise<void> {
-    // No initialization needed for hardcoded chains
+    // Restore last selected chain if available
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = window.localStorage.getItem(LAST_CHAIN_KEY)
+        if (saved) {
+          const savedId = parseInt(saved, 10)
+          if (!Number.isNaN(savedId)) {
+            this.setChainId(savedId)
+          }
+        }
+      }
+    } catch {}
   }
 
   setWallet(type: string, address: string, chainId?: number) {
@@ -75,9 +88,13 @@ class NetworkAdapter {
 
   setChainId(chainId: number) {
     this.currentChainId = chainId
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(LAST_CHAIN_KEY, String(chainId))
+      }
+    } catch {}
     evmContractService.setChainId(chainId)
     // After a chain switch, clear stores and caches to avoid cross-chain collisions
-    // Assume existence of useEVMPotStore().clearCache()
     try {
       const potStore = require('@/store/evm-pot-store');
       if (potStore && potStore.useEVMPotStore) {
