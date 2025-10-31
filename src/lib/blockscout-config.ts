@@ -1,3 +1,4 @@
+import { CHAINS } from "@/config/viem"
 import { defineChain } from "viem"
 
 // Sepolia Testnet configuration for Blockscout SDK
@@ -53,36 +54,21 @@ export const blockscoutConfig = {
   },
 
   // Multi chain support
-  supportedChains: [
-    {
-      id: 11155111,
-      name: "Sepolia",
-      rpcUrl: "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
-      explorerUrl: "https://eth-sepolia.blockscout.com",
-      apiUrl: "https://eth-sepolia.blockscout.com/api/v2",
-      nativeCurrency: {
-        name: "Ether",
-        symbol: "ETH",
-        decimals: 18,
-      },
-      isTestnet: true,
-      isActive: true,
+  supportedChains: CHAINS.map((chain) => ({
+    id: chain.id,
+    name: chain.name,
+    rpcUrl: chain.rpcUrls.default.http[0],
+    explorerUrl: chain.blockExplorers.default.url,
+    apiUrl: `${chain.blockExplorers.default.url}/api/v2`,
+    nativeCurrency: {
+      name: chain.nativeCurrency.name,
+      symbol: chain.nativeCurrency.symbol,
+      decimals: chain.nativeCurrency.decimals,
     },
-    {
-      id: 102031,
-      name: "Creditcoin Testnet",
-      rpcUrl: "https://rpc.cc3-testnet.creditcoin.network",
-      explorerUrl: "https://creditcoin-testnet.blockscout.com",
-      apiUrl: "https://creditcoin-testnet.blockscout.com/api/v2",
-      nativeCurrency: {
-        name: "Creditcoin",
-        symbol: "CTC",
-        decimals: 18,
-      },
-      isTestnet: true,
-      isActive: true,
-    },
-  ],
+    isTestnet: chain.testnet,
+    isActive: true,
+  })),
+  
 
   // Token configurations
   tokens: {
