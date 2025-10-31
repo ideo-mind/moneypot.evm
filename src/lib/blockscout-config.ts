@@ -52,7 +52,7 @@ export const blockscoutConfig = {
     isTestnet: true,
   },
 
-  // Single chain support for Sepolia
+  // Multi chain support
   supportedChains: [
     {
       id: 11155111,
@@ -63,6 +63,20 @@ export const blockscoutConfig = {
       nativeCurrency: {
         name: "Ether",
         symbol: "ETH",
+        decimals: 18,
+      },
+      isTestnet: true,
+      isActive: true,
+    },
+    {
+      id: 102031,
+      name: "Creditcoin Testnet",
+      rpcUrl: "https://rpc.cc3-testnet.creditcoin.network",
+      explorerUrl: "https://creditcoin-testnet.blockscout.com",
+      apiUrl: "https://creditcoin-testnet.blockscout.com/api/v2",
+      nativeCurrency: {
+        name: "Creditcoin",
+        symbol: "CTC",
         decimals: 18,
       },
       isTestnet: true,
@@ -86,6 +100,20 @@ export const blockscoutConfig = {
       decimals: 18,
       chainId: 11155111,
     },
+    UNREAL: {
+      address: "0x15EDeBfe6De62Fe4827C00d82e0230566600aF73",
+      symbol: "UNREAL",
+      name: "Unreal Token",
+      decimals: 18,
+      chainId: 102031,
+    },
+    CTC: {
+      address: "0x0000000000000000000000000000000000000000",
+      symbol: "CTC",
+      name: "Creditcoin",
+      decimals: 18,
+      chainId: 102031,
+    },
   },
 
   // Contract addresses
@@ -93,6 +121,10 @@ export const blockscoutConfig = {
     MoneyPot: {
       address: "0x03EE9A0211EA332f70b9D30D14a13FD8e465aa43",
       chainId: 11155111,
+    },
+    MoneyPot_CC: {
+      address: "0x171AB010407D5A2640c91fdCb7C9f5f4507a9ee5",
+      chainId: 102031,
     },
   },
 
@@ -121,6 +153,14 @@ export const getChainConfig = (chainId: number) => {
 }
 
 export const getCurrentChainConfig = () => {
+  try {
+    const saved = typeof window !== 'undefined' ? window.localStorage.getItem('evm-last-chain-id') : null
+    if (saved) {
+      const id = parseInt(saved, 10)
+      const found = getChainConfig(id)
+      if (found) return found
+    }
+  } catch {}
   return blockscoutConfig.primaryChain
 }
 
@@ -145,5 +185,7 @@ export const getExplorerUrl = (chainId?: number) => {
 
 export const getApiUrl = (chainId?: number) => {
   const chain = chainId ? getChainConfig(chainId) : getCurrentChainConfig()
-  return chain?.apiUrl || blockscoutConfig.primaryChain.apiUrl
+  if (chain?.apiUrl) return chain.apiUrl
+  if (chain?.explorerUrl) return `${chain.explorerUrl}/api/v2`
+  return blockscoutConfig.primaryChain.apiUrl
 }
