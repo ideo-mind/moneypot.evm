@@ -1,4 +1,4 @@
-import { CHAINS } from "@/config/viem"
+import { CHAINS, CHAIN_DEFAULT } from "@/config/viem"
 import { defineChain } from "viem"
 
 // Sepolia Testnet configuration for Blockscout SDK
@@ -38,19 +38,18 @@ export const sepoliaBlockscout = defineChain({
 
 // Blockscout SDK configuration
 export const blockscoutConfig = {
-  // Primary chain configuration
   primaryChain: {
-    id: 11155111,
-    name: "Sepolia",
-    rpcUrl: "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
-    explorerUrl: "https://eth-sepolia.blockscout.com",
-    apiUrl: "https://eth-sepolia.blockscout.com/api/v2",
+    id: CHAIN_DEFAULT.id,
+    name: CHAIN_DEFAULT.name,
+    rpcUrl: CHAIN_DEFAULT.rpcUrls.default.http[0],
+    explorerUrl: CHAIN_DEFAULT.blockExplorers.default.url,
+    apiUrl: `${CHAIN_DEFAULT.blockExplorers.default.url}/api/v2`,
     nativeCurrency: {
-      name: "Ether",
-      symbol: "ETH",
-      decimals: 18,
+      name: CHAIN_DEFAULT.nativeCurrency.name,
+      symbol: CHAIN_DEFAULT.nativeCurrency.symbol,
+      decimals: CHAIN_DEFAULT.nativeCurrency.decimals,
     },
-    isTestnet: true,
+    isTesnet: true,
   },
 
   // Multi chain support
@@ -70,37 +69,28 @@ export const blockscoutConfig = {
   })),
   
 
-  // Token configurations
   tokens: {
-    PYUSD: {
-      address: "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9",
-      symbol: "PYUSD",
-      name: "PayPal USD",
-      decimals: 6,
-      chainId: 11155111,
-    },
-    ETH: {
-      address: "0x0000000000000000000000000000000000000000", // Native token
-      symbol: "ETH",
-      name: "Ether",
-      decimals: 18,
-      chainId: 11155111,
-    },
-    UNREAL: {
-      address: "0x15EDeBfe6De62Fe4827C00d82e0230566600aF73",
-      symbol: "UNREAL",
-      name: "Unreal Token",
-      decimals: 18,
-      chainId: 102031,
-    },
-    CTC: {
-      address: "0x0000000000000000000000000000000000000000",
-      symbol: "CTC",
-      name: "Creditcoin",
-      decimals: 18,
-      chainId: 102031,
-    },
-  },
+    ...CHAINS.map((chain) => ({
+      [chain.custom.moneypot.token.symbol]: {
+        address: chain.custom.moneypot.token.address,
+        symbol: chain.custom.moneypot.token.symbol,
+        name: chain.custom.moneypot.token.name,
+        decimals: chain.custom.moneypot.token.decimals,
+        chainId: chain.id,
+      },
+    })),
+
+    ...CHAINS.map((chain) => ({
+      [chain.nativeCurrency.symbol]: {
+        address: "0x0000000000000000000000000000000000000000",
+        symbol: chain.nativeCurrency.symbol,
+        name: chain.nativeCurrency.name,
+        decimals: chain.nativeCurrency.decimals,
+        chainId: chain.id,
+      },
+    })),
+  
+},
 
   // Contract addresses
   contracts: {
