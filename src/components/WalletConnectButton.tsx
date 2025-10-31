@@ -9,7 +9,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { formatETH, publicClient } from '@/config/viem';
 import { evmContractService } from '@/lib/evm-api';
-import { getConnectedWallet, switchNetwork, addNetwork } from '@/lib/web3onboard';
+import { getConnectedWallet } from '@/lib/web3onboard';
+import { ensureWalletOnChain } from '@/lib/web3onboard';
 import { AlertTriangle, ChevronDown, Coins, Copy, LogOut, Moon, Sun, Wallet, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useWallet } from './WalletProvider';
@@ -74,7 +75,7 @@ export function WalletConnectButton() {
         };
       }
     }
-  }, [walletState.type]);
+  }, [walletState.type, currentChain.id]);
 
   // Fetch balances when connected
   useEffect(() => {
@@ -93,12 +94,12 @@ export function WalletConnectButton() {
             console.error('Failed to fetch ETH balance:', error);
           }
 
-          // Get PYUSD balance from contract
+          // Get token balance from contract
           let usdcBalance = 0;
           try {
             usdcBalance = await evmContractService.getBalance(walletState.address as `0x${string}`);
           } catch (error) {
-            console.error('Failed to fetch PYUSD balance:', error);
+            console.error('Failed to fetch token balance:', error);
           }
 
           setBalances({
@@ -117,7 +118,7 @@ export function WalletConnectButton() {
       } else {
         setBalances({
           usdc: null,
-          ctc: null,
+          eth: null,
           loading: false
         });
       }
@@ -126,11 +127,7 @@ export function WalletConnectButton() {
     if (walletState.isConnected) {
       fetchBalances();
     } else {
-      setBalances({
-        usdc: null,
-        ctc: null,
-        loading: false
-      });
+      setBalances({ usdc: null, eth: null, loading: false });
     }
   }, [walletState.address, walletState.isConnected, walletState.type]);
 
@@ -140,17 +137,11 @@ export function WalletConnectButton() {
     }
   };
 
-  const switchToTestnet = async () => {
+  const switchToSelected = async () => {
     try {
-      await switchNetwork(102031); // Testnet chain ID
+      await ensureWalletOnChain(currentChain.id);
     } catch (error) {
       console.error('Failed to switch EVM network:', error);
-      // If switching fails, try adding the network first
-      try {
-        await addNetwork();
-      } catch (addError) {
-        console.error('Failed to add network:', addError);
-      }
     }
   };
 
@@ -167,7 +158,7 @@ export function WalletConnectButton() {
             <Button
               size="sm"
               variant="outline"
-              onClick={switchToTestnet}
+              onClick={switchToSelected}
               className="ml-auto h-6 px-2 text-xs"
             >
               Switch
@@ -241,7 +232,7 @@ export function WalletConnectButton() {
                   </div>
                   <div className="flex items-center gap-2 text-xs">
                     <Coins className="w-3 h-3 text-blue-500" />
-                    <span>PYUSD: {typeof balances.usdc === 'number' ? balances.usdc.toFixed(2) : '0.00'}</span>
+                    <span>Token: {typeof balances.usdc === 'number' ? balances.usdc.toFixed(2) : '0.00'}</span>
                   </div>
                 </div>
               )}
@@ -282,7 +273,12 @@ export function WalletConnectButton() {
     <Button
       disabled={walletState.isLoading}
       className="bg-brand-green hover:bg-brand-green/90 text-white"
-      onClick={connectEVM}
+      onClick={async () => {
+        // If already connected (e.g., extension says connected), try autoSelect first
+        const already = getConnectedWallet()
+        if (already) return; // no-op
+        await connectEVM()
+      }}
     >
       {walletState.isLoading ? 'Connecting...' : 'Connect Wallet'}
     </Button>
