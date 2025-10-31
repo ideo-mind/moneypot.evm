@@ -64,6 +64,7 @@ export const BlockscoutBalance: React.FC<BlockscoutBalanceProps> = ({
           const tokenData = await tokenBalancesResponse.json();
           if (tokenData.items) {
             tokenData.items.forEach((token: any) => {
+              // console.log('token data', token);
               balances.push({
                 address: token.token.address,
                 symbol: token.token.symbol,

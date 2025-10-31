@@ -232,7 +232,7 @@ export function WalletConnectButton() {
                   </div>
                   <div className="flex items-center gap-2 text-xs">
                     <Coins className="w-3 h-3 text-blue-500" />
-                    <span>Token: {typeof balances.usdc === 'number' ? balances.usdc.toFixed(2) : '0.00'}</span>
+                    <span>{currentChain.custom.moneypot?.token?.name || 'Token'}: {typeof balances.usdc === 'number' ? balances.usdc.toFixed(2) : '0.00'}</span>
                   </div>
                 </div>
               )}
