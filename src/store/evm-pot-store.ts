@@ -4,10 +4,16 @@ import { evmContractService } from "@/lib/evm-api"
 import { formatDistanceToNowStrict } from "date-fns"
 import { MoneyPotData } from "@/abis/evm/money-pot"
 import { formatTokenAmount } from "@/config/viem"
+import type { MoneyPotCustomConfig } from '@/config/viem';
+import type { Chain } from 'viem';
 
-const EVM_ATTEMPTS_STORAGE_KEY = "evm-money-pot-attempts"
-const EVM_POTS_STORAGE_KEY = "evm-money-pot-pots"
-const EVM_POTS_METADATA_KEY = "evm-money-pot-metadata"
+// Helper for chain-aware cache keys
+const getChainSuffix = (chainId: number) => `-${chainId}`;
+
+// Replace global keys with chain-namespaced versions
+const getAttemptsKey = (chainId: number) => `evm-money-pot-attempts${getChainSuffix(chainId)}`;
+const getPotsKey = (chainId: number) => `evm-money-pot-pots${getChainSuffix(chainId)}`;
+const getMetadataKey = (chainId: number) => `evm-money-pot-metadata${getChainSuffix(chainId)}`;
 
 interface EVMPotMetadata {
   lastFetch: number
@@ -51,8 +57,10 @@ export const transformEVMPotToPot = (
   const attemptsCount = evmPot.attemptsCount || BigInt(0)
   const createdAt = evmPot.createdAt || BigInt(0)
 
-  const totalValue = formatTokenAmount(totalAmount, chainId)
-  const entryFee = formatTokenAmount(fee, chainId)
+  // Use the same type assertion as in viem.ts
+  const chain = getChain(chainId) as Chain & { custom: MoneyPotCustomConfig };
+  const totalValue = formatTokenAmount(totalAmount, chainId);
+  const entryFee = formatTokenAmount(fee, chainId);
   // Note: HUNTER_SHARE_PERCENT from contract is 90%, so reward is 90% of total
   // This will be updated to read from contract when needed
   const potentialReward = totalValue * 0.9
@@ -159,8 +167,9 @@ export const useEVMPotStore = create<EVMPotState>((set, get) => ({
     set({ loading: true, error: null })
 
     try {
+      const chainId = evmContractService.currentChainId;
       // Load metadata
-      const metadataStr = localStorage.getItem(EVM_POTS_METADATA_KEY)
+      const metadataStr = localStorage.getItem(getMetadataKey(chainId))
       let metadata: EVMPotMetadata = {
         lastFetch: 0,
         totalPots: 0,
@@ -261,11 +270,11 @@ export const useEVMPotStore = create<EVMPotState>((set, get) => ({
         })
 
         // Save to localStorage
-        localStorage.setItem(EVM_POTS_METADATA_KEY, JSON.stringify(metadata))
-        localStorage.setItem(EVM_POTS_STORAGE_KEY, JSON.stringify(potsMap))
+        localStorage.setItem(getMetadataKey(chainId), JSON.stringify(metadata))
+        localStorage.setItem(getPotsKey(chainId), JSON.stringify(potsMap))
       } else {
         // Load from localStorage
-        const potsStr = localStorage.getItem(EVM_POTS_STORAGE_KEY)
+        const potsStr = localStorage.getItem(getPotsKey(chainId))
         if (potsStr) {
           const potsMap = JSON.parse(potsStr)
           const sortedPots = Object.values(potsMap).sort(
@@ -340,14 +349,16 @@ export const useEVMPotStore = create<EVMPotState>((set, get) => ({
     }))
 
     // Save to localStorage
-    const attemptsStr = localStorage.getItem(EVM_ATTEMPTS_STORAGE_KEY)
+    const chainId = evmContractService.currentChainId;
+    const attemptsStr = localStorage.getItem(getAttemptsKey(chainId))
     const attempts = attemptsStr ? JSON.parse(attemptsStr) : []
     attempts.push(attempt)
-    localStorage.setItem(EVM_ATTEMPTS_STORAGE_KEY, JSON.stringify(attempts))
+    localStorage.setItem(getAttemptsKey(chainId), JSON.stringify(attempts))
   },
 
   loadAttempts: () => {
-    const attemptsStr = localStorage.getItem(EVM_ATTEMPTS_STORAGE_KEY)
+    const chainId = evmContractService.currentChainId;
+    const attemptsStr = localStorage.getItem(getAttemptsKey(chainId))
     if (attemptsStr) {
       const attempts = JSON.parse(attemptsStr)
       set({ attempts })
@@ -366,10 +377,10 @@ export const useEVMPotStore = create<EVMPotState>((set, get) => ({
   },
 
   clearCache: () => {
-    localStorage.removeItem(EVM_POTS_STORAGE_KEY)
-    localStorage.removeItem(EVM_POTS_METADATA_KEY)
-    localStorage.removeItem(EVM_ATTEMPTS_STORAGE_KEY)
-
+    const chainId = evmContractService.currentChainId;
+    localStorage.removeItem(getPotsKey(chainId));
+    localStorage.removeItem(getMetadataKey(chainId));
+    localStorage.removeItem(getAttemptsKey(chainId));
     set({
       pots: {},
       sortedPots: [],

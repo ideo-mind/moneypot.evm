@@ -25,10 +25,13 @@ export function NetworkSelector() {
     try {
       adapter.setChainId(chainId);
       setCurrentChainId(chainId);
-      
+
       if (walletState?.type === 'evm') {
         console.log(`Switching to chain ${chainId}`);
       }
+      // Force reload window and clear storage to avoid cross-chain data collision
+      window.localStorage.clear();
+      window.location.reload();
     } catch (error) {
       console.error('Failed to switch chain:', error);
     }

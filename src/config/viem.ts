@@ -20,6 +20,25 @@ import {
 // Export Chain type for use in other config files
 export { type Chain } from "viem"
 
+// Fix: Extend Chain type for 'custom' field for moneypot and token typing
+interface MoneyPotTokenConfig {
+  address: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  abis: typeof erc20Abi;
+  faucet?: string[];
+}
+interface MoneyPotCustomConfig {
+  moneypot: {
+    address: string;
+    abis: typeof moneyPotABI;
+    token: MoneyPotTokenConfig;
+  };
+  onep?: object;
+}
+// Patch getChain() return type to known custom shape where needed:
+
 // Sepolia Testnet Configuration - Single supported chain
 
 export const sepolia = defineChain({
@@ -86,13 +105,62 @@ export const sepolia = defineChain({
   testnet: true,
 })
 
+export const creditcoinTestnet = defineChain({
+  id: 102031,
+  name: 'Creditcoin Testnet',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Creditcoin',
+    symbol: 'CTC',
+    faucet: [
+      'https://console.unreal.art/'
+    ],
+  },
+  rpcUrls: {
+    default: {
+      http: ['https://rpc.cc3-testnet.creditcoin.network'],
+      webSocket: ['wss://rpc.cc3-testnet.creditcoin.network'],
+    },
+    public: {
+      http: ['https://rpc.cc3-testnet.creditcoin.network'],
+      webSocket: ['wss://rpc.cc3-testnet.creditcoin.network'],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: 'Creditcoin Explorer',
+      url: 'https://creditcoin-testnet.blockscout.com',
+    },
+  },
+  custom: {
+    moneypot: {
+      address: '0x171AB010407D5A2640c91fdCb7C9f5f4507a9ee5',
+      abis: moneyPotABI,
+      token: {
+        address: '0x15EDeBfe6De62Fe4827C00d82e0230566600aF73',
+        symbol: 'UNREAL',
+        name: 'Unreal Token',
+        decimals: 18,
+        abis: erc20Abi,
+        faucet: [
+          'https://console.unreal.art/'
+        ],
+      },
+    },
+    onep: {
+      // TODO: one p yet to be deployed for cc
+    },
+  },
+  testnet: true,
+})
+
 // Contract addresses are now accessed through chain configuration
 // Use getMoneyPotContractAddress(chainId) and getOnePContractAddress(chainId) from @config/networks
 
 // Simple hardcoded chains - Sepolia first as default
 
 // Single supported chain
-export const CHAINS = [sepolia]
+export const CHAINS = [sepolia, creditcoinTestnet]
 
 // Default chain - Sepolia
 export const CHAIN_DEFAULT = sepolia
@@ -260,10 +328,10 @@ export const parseETH = (eth: number) => {
  * @returns bigint value with proper decimals
  */
 export const parseTokenAmount = (amount: number, chainId: number): bigint => {
-  const chain = getChain(chainId)
-  const decimals = chain.custom.moneypot.token.decimals
-  return parseUnits(amount.toString(), decimals)
-}
+  const chain = getChain(chainId) as Chain & { custom: MoneyPotCustomConfig };
+  const decimals = chain.custom.moneypot.token.decimals;
+  return parseUnits(amount.toString(), decimals);
+};
 
 /**
  * Format token amount from bigint to number using token decimals from chain config
@@ -272,7 +340,7 @@ export const parseTokenAmount = (amount: number, chainId: number): bigint => {
  * @returns number value with proper decimals
  */
 export const formatTokenAmount = (amount: bigint, chainId: number): number => {
-  const chain = getChain(chainId)
-  const decimals = chain.custom.moneypot.token.decimals
-  return Number(formatUnits(amount, decimals))
-}
+  const chain = getChain(chainId) as Chain & { custom: MoneyPotCustomConfig };
+  const decimals = chain.custom.moneypot.token.decimals;
+  return Number(formatUnits(amount, decimals));
+};

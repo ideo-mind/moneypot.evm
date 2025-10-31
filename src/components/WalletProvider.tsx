@@ -39,7 +39,8 @@ export const WalletProvider = ({ children }: PropsWithChildren) => {
         const account = evmWallet.accounts[0]
         
         // Set wallet client in contract service
-        evmContractService.setWalletClient(evmWallet)
+        const chainId = evmContractService.currentChainId || 11155111
+        evmContractService.setWalletClient(evmWallet, chainId)
         
         setWalletState({
           type: 'evm',

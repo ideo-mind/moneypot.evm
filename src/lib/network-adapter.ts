@@ -76,6 +76,14 @@ class NetworkAdapter {
   setChainId(chainId: number) {
     this.currentChainId = chainId
     evmContractService.setChainId(chainId)
+    // After a chain switch, clear stores and caches to avoid cross-chain collisions
+    // Assume existence of useEVMPotStore().clearCache()
+    try {
+      const potStore = require('@/store/evm-pot-store');
+      if (potStore && potStore.useEVMPotStore) {
+        potStore.useEVMPotStore.getState().clearCache();
+      }
+    } catch (err) {}
   }
 
   get currentChain(): number {
