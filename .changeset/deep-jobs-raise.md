@@ -2,4 +2,5 @@
 "money-pot": minor
 ---
 
-deploy to cc ; feat: multichain support
+- "Add multichain support with Creditcoin Testnet integration"
+- "Enable dynamic chain configuration and Creditcoin Testnet deployment"
