@@ -94,6 +94,7 @@ class NetworkAdapter {
       }
     } catch {}
     evmContractService.setChainId(chainId)
+    evmVerifierService.setChainId(chainId) // Update chain ID in verifier service
     // After a chain switch, clear stores and caches to avoid cross-chain collisions
     try {
       const potStore = require('@/store/evm-pot-store');
