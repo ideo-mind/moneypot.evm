@@ -68,40 +68,46 @@ export const blockscoutConfig = {
     isActive: true,
   })),
   
+  
 
   tokens: {
-    ...CHAINS.map((chain) => ({
-      [chain.custom.moneypot.token.symbol]: {
-        address: chain.custom.moneypot.token.address,
-        symbol: chain.custom.moneypot.token.symbol,
-        name: chain.custom.moneypot.token.name,
-        decimals: chain.custom.moneypot.token.decimals,
-        chainId: chain.id,
-      },
-    })),
-
-    ...CHAINS.map((chain) => ({
-      [chain.nativeCurrency.symbol]: {
-        address: "0x0000000000000000000000000000000000000000",
-        symbol: chain.nativeCurrency.symbol,
-        name: chain.nativeCurrency.name,
-        decimals: chain.nativeCurrency.decimals,
-        chainId: chain.id,
-      },
-    })),
-  
-},
+    ...Object.fromEntries(
+      CHAINS.map((chain) => [
+        chain.custom.moneypot.token.symbol,
+        {
+          address: chain.custom.moneypot.token.address,
+          symbol: chain.custom.moneypot.token.symbol,
+          name: chain.custom.moneypot.token.name,
+          decimals: chain.custom.moneypot.token.decimals,
+          chainId: chain.id,
+        },
+      ])
+    ),
+    ...Object.fromEntries(
+      CHAINS.map((chain) => [
+        chain.nativeCurrency.symbol,
+        {
+          address: "0x0000000000000000000000000000000000000000",
+          symbol: chain.nativeCurrency.symbol,
+          name: chain.nativeCurrency.name,
+          decimals: chain.nativeCurrency.decimals,
+          chainId: chain.id,
+        },
+      ])
+    ),
+  },
 
   // Contract addresses
   contracts: {
-    MoneyPot: {
-      address: "0x03EE9A0211EA332f70b9D30D14a13FD8e465aa43",
-      chainId: 11155111,
-    },
-    MoneyPot_CC: {
-      address: "0x171AB010407D5A2640c91fdCb7C9f5f4507a9ee5",
-      chainId: 102031,
-    },
+    ...Object.fromEntries(
+      CHAINS.map((chain) => [
+        `MoneyPot_${chain.id}`,
+        {
+          address: chain.custom.moneypot.address,
+          chainId: chain.id,
+        },
+      ])
+    ),
   },
 
   // Notification settings
@@ -122,6 +128,7 @@ export const blockscoutConfig = {
     AIRDROP: "airdrop",
   },
 }
+
 
 // Helper functions
 export const getChainConfig = (chainId: number) => {
