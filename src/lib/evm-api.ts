@@ -175,7 +175,7 @@ class EVMContractService {
           abi: erc20Abi,
           functionName: "approve",
           args: [chainConfig.contractAddress, maxApproval],
-          gas: 200000n, // Higher gas limit for approval transactions
+          gas: 500000n, // Higher gas limit for approval transactions
         })
 
         // Wait for approval confirmation

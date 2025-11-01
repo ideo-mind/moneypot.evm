@@ -11,3 +11,6 @@ export const INFURA_API_KEY: string =
 
 export const ALCHEMY_API_KEY: string =
   (import.meta.env.VITE_ALCHEMY_API_KEY as string) || "ALCHEMY_API_KEY"
+
+export const ANKR_API_KEY: string =
+  (import.meta.env.VITE_ANKR_API_KEY as string) || "ANKR_API_KEY"
