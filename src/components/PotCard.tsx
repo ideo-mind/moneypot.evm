@@ -69,7 +69,12 @@ export function PotCard({ pot }: PotCardProps) {
               <AvatarFallback>{pot.creator.slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-lg font-display">{pot.title}</CardTitle>
+              <CardTitle className="text-lg font-display">
+                {pot.title}
+                <span className="ml-2 text-xs px-2 rounded text-white bg-gray-500 font-mono">
+                  {pot.chainId === '102031' ? 'CC Testnet' : pot.chainId === '11155111' ? 'Sepolia' : pot.chainId}
+                </span>
+              </CardTitle>
               <p className="text-sm text-muted-foreground">by {pot.creatorUsername || `${pot.creator.slice(0, 6)}...${pot.creator.slice(-4)}`}</p>
             </div>
           </div>

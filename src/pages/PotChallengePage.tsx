@@ -276,7 +276,15 @@ export function PotChallengePage() {
       
       const signature = await EVMVerifierServiceClient.createEVMSignature(evmWallet, message);
 
-      const authResponse = await evmVerifierService.authenticateOptions(attemptId, signature);
+      // Get current chain ID from the currentChain context
+      const currentChainId = currentChain.id;
+      console.log("Using chain ID for authentication:", currentChainId);
+
+      const authResponse = await evmVerifierService.authenticateOptions(
+        attemptId,
+        signature,
+        currentChainId
+      );
       console.log("Full EVM auth response:", authResponse);
       
       // Extract challenge_id from response (as per demo.py line 815)
@@ -395,10 +403,15 @@ export function PotChallengePage() {
           // Use EVM verifier service
           const solutions = updatedSolutions;
           
+          // Get current chain ID from the currentChain context
+          const currentChainId = currentChain.id;
+          console.log("Using chain ID for verification:", currentChainId);
+
           verifyResponse = await evmVerifierService.authenticateVerify(
             solutions,
             challengeId,
-            signature
+            signature,
+            currentChainId
           );
           console.log("Response from EVM /authenticate/verify:", verifyResponse);
         } catch (error) {

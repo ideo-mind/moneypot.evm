@@ -1,47 +1,60 @@
 import { useState, useCallback, useEffect } from "react"
-import { sepolia, getChain } from "@/config/viem"
+import { CHAINS, CHAIN_DEFAULT, getChain, Chain } from "@/config/viem"
+
+const LAST_CHAIN_KEY = 'evm-last-chain-id'
 
 export interface ChainSwitchState {
-  currentChain: typeof sepolia
+  currentChain: Chain
   isSwitching: boolean
   error: string | null
 }
 
 export const useChainSwitch = () => {
   const [state, setState] = useState<ChainSwitchState>({
-    currentChain: sepolia,
+    currentChain: CHAIN_DEFAULT,
     isSwitching: false,
     error: null,
   })
 
-  // Initialize with Sepolia
   useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(LAST_CHAIN_KEY)
+      if (saved) {
+        const savedId = parseInt(saved, 10)
+        if (!Number.isNaN(savedId)) {
+          setState((prev) => ({ ...prev, currentChain: getChain(savedId) }))
+          return
+        }
+      }
+    } catch {}
     setState((prev) => ({
       ...prev,
-      currentChain: sepolia,
+      currentChain: CHAIN_DEFAULT,
     }))
   }, [])
 
-  const switchToSepolia = useCallback(async () => {
+  const switchToChain = useCallback(async (chainId: number) => {
     setState((prev) => ({
       ...prev,
       isSwitching: true,
       error: null,
     }))
-
     try {
-      // Since we only support Sepolia, just set it as current
+      const nextChain = getChain(chainId)
+      try {
+        window.localStorage.setItem(LAST_CHAIN_KEY, String(chainId))
+      } catch {}
       setState((prev) => ({
         ...prev,
-        currentChain: sepolia,
+        currentChain: nextChain,
         isSwitching: false,
         error: null,
       }))
-
+      window.location.reload()
       return true
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to switch to Sepolia"
+        error instanceof Error ? error.message : `Failed to switch chain (${chainId})`
       setState((prev) => ({
         ...prev,
         isSwitching: false,
@@ -58,7 +71,6 @@ export const useChainSwitch = () => {
     }))
   }, [])
 
-  // Helper functions
   const isCurrentChainTestnet = useCallback(() => {
     return state.currentChain.testnet
   }, [state.currentChain])
@@ -72,16 +84,11 @@ export const useChainSwitch = () => {
   }, [state.currentChain])
 
   return {
-    // State
     currentChain: state.currentChain,
     isSwitching: state.isSwitching,
     error: state.error,
-
-    // Actions
-    switchToSepolia,
+    switchToChain,
     clearError,
-
-    // Helpers
     isCurrentChainTestnet,
     getCurrentChainExplorerUrl,
     getCurrentChainRpcUrl,

@@ -3,7 +3,7 @@ import injectedModule from "@web3-onboard/injected-wallets"
 import walletConnectModule from "@web3-onboard/walletconnect"
 import coinbaseModule from "@web3-onboard/coinbase"
 import metamaskModule from "@web3-onboard/metamask"
-import { CHAINS, CHAIN_DEFAULT } from "@/config/viem"
+import { CHAINS, CHAIN_DEFAULT, getChain } from "@/config/viem"
 import { toHex } from "viem"
 import { WALLETCONNECT_PROJECT_ID } from "@/config"
 
@@ -108,20 +108,21 @@ export const switchNetwork = async (chainId: number) => {
   }
 }
 
-// Helper function to add network if not exists
-export const addNetwork = async () => {
+// Helper function to add network if not exists (generic)
+export const addNetwork = async (chainId: number) => {
   try {
     const wallet = getConnectedWallet()
     if (wallet) {
+      const chain = getChain(chainId)
       await wallet.provider.request({
         method: "wallet_addEthereumChain",
         params: [
           {
-            chainId: `0x${CHAIN_DEFAULT.id.toString(16)}`,
-            chainName: CHAIN_DEFAULT.name,
-            nativeCurrency: CHAIN_DEFAULT.nativeCurrency,
-            rpcUrls: CHAIN_DEFAULT.rpcUrls.default.http,
-            blockExplorerUrls: [CHAIN_DEFAULT.blockExplorers.default.url],
+            chainId: `0x${chain.id.toString(16)}`,
+            chainName: chain.name,
+            nativeCurrency: chain.nativeCurrency,
+            rpcUrls: chain.rpcUrls.default.http,
+            blockExplorerUrls: [chain.blockExplorers.default.url],
           },
         ],
       })
@@ -129,5 +130,20 @@ export const addNetwork = async () => {
   } catch (error) {
     console.error("Failed to add network:", error)
     throw error
+  }
+}
+
+// Ensure wallet is on a given chain: switch, or add then switch
+export const ensureWalletOnChain = async (chainId: number) => {
+  try {
+    await switchNetwork(chainId)
+  } catch (err: any) {
+    // If error is chain not added (e.g., 4902), try adding then switching
+    try {
+      await addNetwork(chainId)
+      await switchNetwork(chainId)
+    } catch (e) {
+      throw e
+    }
   }
 }

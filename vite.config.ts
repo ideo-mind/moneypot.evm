@@ -73,9 +73,9 @@ export default defineConfig(({ mode }) => {
         include: [/node_modules/],
         transformMixedEsModules: true,
       },
-      rollupOptions: {
-        external: ["@reown/appkit/core", "@coinbase/wallet-sdk"],
-      },
+      // rollupOptions: {
+      //   external: ["@reown/appkit/core", "@coinbase/wallet-sdk"],
+      // },
     },
   }
 })

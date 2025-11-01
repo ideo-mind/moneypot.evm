@@ -11,11 +11,28 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { CHAINS, CHAIN_DEFAULT } from '@/config/viem';
 import { useNetworkAdapter } from '@/lib/network-adapter';
+import { ensureWalletOnChain } from '@/lib/web3onboard';
+
+const LAST_CHAIN_KEY = 'evm-last-chain-id'
 
 export function NetworkSelector() {
   const { walletState } = useWallet();
   const { adapter } = useNetworkAdapter();
   const [currentChainId, setCurrentChainId] = useState<number>(CHAIN_DEFAULT.id);
+
+  // Restore saved chain on mount
+  React.useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(LAST_CHAIN_KEY)
+      if (saved) {
+        const savedId = parseInt(saved, 10)
+        if (!Number.isNaN(savedId)) {
+          setCurrentChainId(savedId)
+          adapter.setChainId(savedId)
+        }
+      }
+    } catch {}
+  }, [adapter])
 
   const getCurrentChain = () => {
     return CHAINS.find(chain => chain.id === currentChainId) || CHAINS[0];
@@ -23,12 +40,23 @@ export function NetworkSelector() {
 
   const handleChainSwitch = async (chainId: number) => {
     try {
+      // Attempt to switch the connected wallet network first (if any)
+      try {
+        await ensureWalletOnChain(chainId)
+      } catch (e) {
+        // Non-fatal: user may not have a wallet connected yet or rejected
+        console.warn('Wallet network switch skipped or failed:', e)
+      }
+
       adapter.setChainId(chainId);
       setCurrentChainId(chainId);
-      
+      try {
+        window.localStorage.setItem(LAST_CHAIN_KEY, String(chainId))
+      } catch {}
       if (walletState?.type === 'evm') {
         console.log(`Switching to chain ${chainId}`);
       }
+      window.location.reload();
     } catch (error) {
       console.error('Failed to switch chain:', error);
     }

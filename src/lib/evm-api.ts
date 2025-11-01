@@ -175,6 +175,7 @@ class EVMContractService {
           abi: erc20Abi,
           functionName: "approve",
           args: [chainConfig.contractAddress, maxApproval],
+          gas: 200000n, // Higher gas limit for approval transactions
         })
 
         // Wait for approval confirmation
@@ -216,6 +217,7 @@ class EVMContractService {
           params.fee,
           params.oneFaAddress,
         ],
+        gas: 500000n, // Higher gas limit for pot creation
       })
 
       // Wait for transaction confirmation
@@ -286,6 +288,7 @@ class EVMContractService {
         abi: contractFunctions.attemptPot.abi,
         functionName: contractFunctions.attemptPot.functionName,
         args: [params.potId],
+        gas: 500000n, // Higher gas limit for pot attempt
       })
 
       // Wait for transaction confirmation

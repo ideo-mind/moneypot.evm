@@ -1,3 +1,4 @@
+import { CHAINS, CHAIN_DEFAULT } from "@/config/viem"
 import { defineChain } from "viem"
 
 // Sepolia Testnet configuration for Blockscout SDK
@@ -37,63 +38,76 @@ export const sepoliaBlockscout = defineChain({
 
 // Blockscout SDK configuration
 export const blockscoutConfig = {
-  // Primary chain configuration
   primaryChain: {
-    id: 11155111,
-    name: "Sepolia",
-    rpcUrl: "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
-    explorerUrl: "https://eth-sepolia.blockscout.com",
-    apiUrl: "https://eth-sepolia.blockscout.com/api/v2",
+    id: CHAIN_DEFAULT.id,
+    name: CHAIN_DEFAULT.name,
+    rpcUrl: CHAIN_DEFAULT.rpcUrls.default.http[0],
+    explorerUrl: CHAIN_DEFAULT.blockExplorers.default.url,
+    apiUrl: `${CHAIN_DEFAULT.blockExplorers.default.url}/api/v2`,
     nativeCurrency: {
-      name: "Ether",
-      symbol: "ETH",
-      decimals: 18,
+      name: CHAIN_DEFAULT.nativeCurrency.name,
+      symbol: CHAIN_DEFAULT.nativeCurrency.symbol,
+      decimals: CHAIN_DEFAULT.nativeCurrency.decimals,
     },
-    isTestnet: true,
+    isTesnet: CHAIN_DEFAULT.testnet,
   },
 
-  // Single chain support for Sepolia
-  supportedChains: [
-    {
-      id: 11155111,
-      name: "Sepolia",
-      rpcUrl: "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
-      explorerUrl: "https://eth-sepolia.blockscout.com",
-      apiUrl: "https://eth-sepolia.blockscout.com/api/v2",
-      nativeCurrency: {
-        name: "Ether",
-        symbol: "ETH",
-        decimals: 18,
-      },
-      isTestnet: true,
-      isActive: true,
+  // Multi chain support
+  supportedChains: CHAINS.map((chain) => ({
+    id: chain.id,
+    name: chain.name,
+    rpcUrl: chain.rpcUrls.default.http[0],
+    explorerUrl: chain.blockExplorers.default.url,
+    apiUrl: `${chain.blockExplorers.default.url}/api/v2`,
+    nativeCurrency: {
+      name: chain.nativeCurrency.name,
+      symbol: chain.nativeCurrency.symbol,
+      decimals: chain.nativeCurrency.decimals,
     },
-  ],
+    isTestnet: chain.testnet,
+    isActive: true,
+  })),
+  
+  
 
-  // Token configurations
   tokens: {
-    PYUSD: {
-      address: "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9",
-      symbol: "PYUSD",
-      name: "PayPal USD",
-      decimals: 6,
-      chainId: 11155111,
-    },
-    ETH: {
-      address: "0x0000000000000000000000000000000000000000", // Native token
-      symbol: "ETH",
-      name: "Ether",
-      decimals: 18,
-      chainId: 11155111,
-    },
+    ...Object.fromEntries(
+      CHAINS.map((chain) => [
++        `${chain.custom.moneypot.token.symbol}_${chain.id}`,
+        {
+          address: chain.custom.moneypot.token.address,
+          symbol: chain.custom.moneypot.token.symbol,
+          name: chain.custom.moneypot.token.name,
+          decimals: chain.custom.moneypot.token.decimals,
+          chainId: chain.id,
+        },
+      ])
+    ),
+    ...Object.fromEntries(
+      CHAINS.map((chain) => [
+        chain.nativeCurrency.symbol,
+        {
+          address: "0x0000000000000000000000000000000000000000",
+          symbol: chain.nativeCurrency.symbol,
+          name: chain.nativeCurrency.name,
+          decimals: chain.nativeCurrency.decimals,
+          chainId: chain.id,
+        },
+      ])
+    ),
   },
 
   // Contract addresses
   contracts: {
-    MoneyPot: {
-      address: "0x03EE9A0211EA332f70b9D30D14a13FD8e465aa43",
-      chainId: 11155111,
-    },
+    ...Object.fromEntries(
+      CHAINS.map((chain) => [
+        `MoneyPot_${chain.id}`,
+        {
+          address: chain.custom.moneypot.address,
+          chainId: chain.id,
+        },
+      ])
+    ),
   },
 
   // Notification settings
@@ -115,12 +129,21 @@ export const blockscoutConfig = {
   },
 }
 
+
 // Helper functions
 export const getChainConfig = (chainId: number) => {
   return blockscoutConfig.supportedChains.find((chain) => chain.id === chainId)
 }
 
 export const getCurrentChainConfig = () => {
+  try {
+    const saved = typeof window !== 'undefined' ? window.localStorage.getItem('evm-last-chain-id') : null
+    if (saved) {
+      const id = parseInt(saved, 10)
+      const found = getChainConfig(id)
+      if (found) return found
+    }
+  } catch {}
   return blockscoutConfig.primaryChain
 }
 
@@ -145,5 +168,7 @@ export const getExplorerUrl = (chainId?: number) => {
 
 export const getApiUrl = (chainId?: number) => {
   const chain = chainId ? getChainConfig(chainId) : getCurrentChainConfig()
-  return chain?.apiUrl || blockscoutConfig.primaryChain.apiUrl
+  if (chain?.apiUrl) return chain.apiUrl
+  if (chain?.explorerUrl) return `${chain.explorerUrl}/api/v2`
+  return blockscoutConfig.primaryChain.apiUrl
 }

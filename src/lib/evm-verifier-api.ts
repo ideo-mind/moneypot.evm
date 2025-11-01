@@ -110,6 +110,7 @@ class EVMVerifierServiceClient {
       encrypted_payload: Buffer.from(payloadJson, "utf-8").toString("hex"),
       signature: signature,
     }
+    // console.log("payload", payload)
 
     return this.makeRequest<EVMVerifierResponse>(
       "/evm/register/verify",
@@ -120,12 +121,13 @@ class EVMVerifierServiceClient {
 
   async authenticateOptions(
     attemptId: string,
-    signature: string
+    signature: string,
+    chainId?: number
   ): Promise<EVMAuthenticateOptions> {
     // Create wallet payload matching demo.py pattern
     const walletPayload = {
       attempt_id: attemptId,
-      chain_id: this.chainId,
+      chain_id: chainId || this.chainId, // Use provided chainId if available
     }
 
     const requestPayload = {
@@ -135,6 +137,8 @@ class EVMVerifierServiceClient {
       ).toString("hex"),
       signature: signature,
     }
+
+    console.log("walletPayload", walletPayload)
 
     return this.makeRequest<EVMAuthenticateOptions>(
       "/evm/authenticate/options",
@@ -146,13 +150,14 @@ class EVMVerifierServiceClient {
   async authenticateVerify(
     solutions: string[],
     challengeId: string,
-    signature: string
+    signature: string,
+    chainId?: number
   ): Promise<EVMVerifierResponse> {
     // Create wallet payload matching demo.py pattern
     const walletPayload = {
       challenge_id: challengeId,
       solutions: solutions,
-      chain_id: this.chainId,
+      chain_id: chainId || this.chainId, // Use provided chainId if available
     }
 
     const requestPayload = {
@@ -213,6 +218,12 @@ class EVMVerifierServiceClient {
       throw error
     }
   }
+
+  // Method to update the chain ID when chains are switched
+  setChainId(chainId: number): void {
+    this.chainId = chainId;
+    console.log("EVMVerifierService: Chain ID updated to", chainId);
+  }
 }
 
 export const evmVerifierService = new EVMVerifierServiceClient()
@@ -228,7 +239,11 @@ export const getAuthOptions = async (
   try {
     // Get the connected wallet to create a signature
     const { getConnectedWallet } = await import("@/lib/web3onboard")
+    const { evmContractService } = await import("@/lib/evm-api")
     const wallet = getConnectedWallet()
+
+    // Get current chain ID to pass to the verifier service
+    const currentChainId = evmContractService.currentChainId
 
     if (!wallet) {
       // Return mock data immediately if no wallet connected
@@ -257,10 +272,12 @@ export const getAuthOptions = async (
       attemptId
     )
 
-    // Call the actual API
+    // Call the actual API with the current chain ID
+    console.log("Using chain ID for authentication:", currentChainId)
     const authOptions = await evmVerifierService.authenticateOptions(
       attemptId,
-      signature
+      signature,
+      currentChainId // Pass the current chain ID explicitly
     )
 
     return authOptions
