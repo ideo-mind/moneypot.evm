@@ -49,7 +49,7 @@ export const blockscoutConfig = {
       symbol: CHAIN_DEFAULT.nativeCurrency.symbol,
       decimals: CHAIN_DEFAULT.nativeCurrency.decimals,
     },
-    isTesnet: true,
+    isTesnet: CHAIN_DEFAULT.testnet,
   },
 
   // Multi chain support
@@ -73,7 +73,7 @@ export const blockscoutConfig = {
   tokens: {
     ...Object.fromEntries(
       CHAINS.map((chain) => [
-        chain.custom.moneypot.token.symbol,
++        `${chain.custom.moneypot.token.symbol}_${chain.id}`,
         {
           address: chain.custom.moneypot.token.address,
           symbol: chain.custom.moneypot.token.symbol,
