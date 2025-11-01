@@ -141,7 +141,7 @@ export const transformEVMPotToPot = (
     creatorAddress,
     // EVM-specific fields
     network: "evm",
-    chainId: "11155111", // Sepolia
+    chainId: chainId.toString()
   }
 }
 
@@ -357,11 +357,16 @@ export const useEVMPotStore = create<EVMPotState>((set, get) => ({
   },
 
   loadAttempts: () => {
-    const chainId = evmContractService.currentChainId;
-    const attemptsStr = localStorage.getItem(getAttemptsKey(chainId))
-    if (attemptsStr) {
-      const attempts = JSON.parse(attemptsStr)
-      set({ attempts })
+    try {
+      const chainId = evmContractService.currentChainId;
+      const attemptsStr = localStorage.getItem(getAttemptsKey(chainId))
+      if (attemptsStr) {
+        const attempts = JSON.parse(attemptsStr)
+        set({ attempts })
+      }
+    } catch (error) {
+      console.error("Failed to load attempts from localStorage:", error)
+      // Silently continue with empty attempts array
     }
   },
 
@@ -435,3 +440,6 @@ export const useEVMPotStore = create<EVMPotState>((set, get) => ({
     return { success, failed }
   },
 }))
+
+// Call loadAttempts() right after store creation to load attempts from localStorage
+useEVMPotStore.getState().loadAttempts()

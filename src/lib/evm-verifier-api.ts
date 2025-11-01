@@ -110,7 +110,7 @@ class EVMVerifierServiceClient {
       encrypted_payload: Buffer.from(payloadJson, "utf-8").toString("hex"),
       signature: signature,
     }
-    console.log("payload", payload)
+    // console.log("payload", payload)
 
     return this.makeRequest<EVMVerifierResponse>(
       "/evm/register/verify",
