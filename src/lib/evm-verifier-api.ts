@@ -136,6 +136,8 @@ class EVMVerifierServiceClient {
       signature: signature,
     }
 
+    console.log("walletPayload", walletPayload)
+
     return this.makeRequest<EVMAuthenticateOptions>(
       "/evm/authenticate/options",
       "POST",
