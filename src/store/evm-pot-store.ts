@@ -3,7 +3,7 @@ import { Pot, Attempt } from "@/types"
 import { evmContractService } from "@/lib/evm-api"
 import { formatDistanceToNowStrict } from "date-fns"
 import { MoneyPotData } from "@/abis/evm/money-pot"
-import { formatTokenAmount } from "@/config/viem"
+import { formatTokenAmount, getChain } from "@/config/viem"
 import type { MoneyPotCustomConfig } from '@/config/viem';
 import type { Chain } from 'viem';
 
