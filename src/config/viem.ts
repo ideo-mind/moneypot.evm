@@ -112,7 +112,7 @@ export const creditcoinTestnet = defineChain({
     decimals: 18,
     name: "Creditcoin",
     symbol: "CTC",
-    faucet: ["https://console.unreal.art/"],
+    faucet: ["https://console.ideomind.org/"],
   },
   rpcUrls: {
     default: {
@@ -140,7 +140,7 @@ export const creditcoinTestnet = defineChain({
         name: "Unreal Token",
         decimals: 18,
         abis: erc20Abi,
-        faucet: ["https://console.unreal.art/"],
+        faucet: ["https://console.ideomind.org/"],
       },
     },
     onep: {

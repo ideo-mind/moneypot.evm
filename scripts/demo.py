@@ -23,7 +23,7 @@ import time
 load_dotenv()
 
 # Configuration
-MONEY_AUTH_URL = os.getenv("MONEY_AUTH_URL", "https://auth.money-pot.unreal.art")
+MONEY_AUTH_URL = os.getenv("MONEY_AUTH_URL", "https://auth.money-pot.ideomind.org")
 CHAIN_ID = int(os.getenv("CHAIN_ID", "102031"))  # Testnet chain ID
 
 
