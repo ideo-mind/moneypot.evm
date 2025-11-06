@@ -1,40 +1,6 @@
 import { CHAINS, CHAIN_DEFAULT } from "@/config/viem"
 import { defineChain } from "viem"
 
-// Sepolia Testnet configuration for Blockscout SDK
-export const sepoliaBlockscout = defineChain({
-  id: 11155111,
-  name: "Sepolia",
-  nativeCurrency: {
-    decimals: 18,
-    name: "Ether",
-    symbol: "ETH",
-  },
-  rpcUrls: {
-    default: {
-      http: [
-        "https://sepolia.infura.io/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
-        "https://ethereum-sepolia-rpc.publicnode.com",
-      ],
-      webSocket: [
-        "wss://sepolia.infura.io/ws/v3/e2f4b52eab9c4e65b2feb158b717ca8f",
-      ],
-    },
-    public: {
-      http: [
-        "https://sepolia.rpc.hypersync.xyz",
-        "https://11155111.rpc.hypersync.xyz",
-      ],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "Sepolia Explorer",
-      url: "https://eth-sepolia.blockscout.com",
-    },
-  },
-  testnet: true,
-})
 
 // Blockscout SDK configuration
 export const blockscoutConfig = {
