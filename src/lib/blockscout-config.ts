@@ -1,15 +1,12 @@
-import { CHAINS, CHAIN_DEFAULT } from "@/config/viem"
+import { CHAINS, CHAIN_DEFAULT, sepolia } from "@/config/viem"
 import { defineChain } from "viem"
 
 // Sepolia Testnet configuration for Blockscout SDK
+// Uses canonical sepolia chain from viem config but overrides RPC URLs
+// with Blockscout SDK-specific endpoints (Infura, hypersync) that may
+// be required for optimal Blockscout SDK functionality
 export const sepoliaBlockscout = defineChain({
-  id: 11155111,
-  name: "Sepolia",
-  nativeCurrency: {
-    decimals: 18,
-    name: "Ether",
-    symbol: "ETH",
-  },
+  ...sepolia,
   rpcUrls: {
     default: {
       http: [
@@ -27,13 +24,6 @@ export const sepoliaBlockscout = defineChain({
       ],
     },
   },
-  blockExplorers: {
-    default: {
-      name: "Sepolia Explorer",
-      url: "https://eth-sepolia.blockscout.com",
-    },
-  },
-  testnet: true,
 })
 
 // Blockscout SDK configuration
