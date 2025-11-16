@@ -141,7 +141,7 @@ export const transformEVMPotToPot = (
     creatorAddress,
     // EVM-specific fields
     network: "evm",
-    chainId: "11155111", // Sepolia
+    chainId: chainId.toString(),
   }
 }
 

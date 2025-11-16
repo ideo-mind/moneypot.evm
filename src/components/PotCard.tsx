@@ -8,9 +8,10 @@ import { Clock, DollarSign, Gem, Shield, XCircle, Users } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { cn } from "@/lib/utils";
 import { useEVMPotStore } from "@/store/evm-pot-store";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useBlockscoutTx } from "@/hooks/use-blockscout-tx";
 import { evmContractService } from "@/lib/evm-api";
+import { getChain } from "@/config/viem";
 
 interface PotCardProps {
   pot: Pot;
@@ -21,6 +22,20 @@ export function PotCard({ pot }: PotCardProps) {
   if (!pot || !pot.creator || !pot.title) {
     return null;
   }
+  
+  // Get chain name dynamically from chainId
+  const chainName = useMemo(() => {
+    try {
+      const chainId = parseInt(pot.chainId || '0');
+      if (chainId) {
+        const chain = getChain(chainId);
+        return chain.name;
+      }
+    } catch (error) {
+      // Fallback to chainId if chain not found
+    }
+    return pot.chainId || 'Unknown';
+  }, [pot.chainId]);
   
   const isHot = parseInt(pot.attempts_count) > 10;
   const expirePot = useEVMPotStore((state) => state.expirePot);
@@ -72,7 +87,7 @@ export function PotCard({ pot }: PotCardProps) {
               <CardTitle className="text-lg font-display">
                 {pot.title}
                 <span className="ml-2 text-xs px-2 rounded text-white bg-gray-500 font-mono">
-                  {pot.chainId === '102031' ? 'CC Testnet' : pot.chainId === '11155111' ? 'Sepolia' : pot.chainId}
+                  {chainName}
                 </span>
               </CardTitle>
               <p className="text-sm text-muted-foreground">by {pot.creatorUsername || `${pot.creator.slice(0, 6)}...${pot.creator.slice(-4)}`}</p>
