@@ -94,12 +94,11 @@ class NetworkAdapter {
       }
     } catch {}
     evmContractService.setChainId(chainId)
-    evmVerifierService.setChainId(chainId) // Update chain ID in verifier service
     // After a chain switch, clear stores and caches to avoid cross-chain collisions
     try {
-      useEVMPotStore.getState().clearCache()
+      useEVMPotStore.getState().clearCache();
     } catch (error) {
-      console.warn("Failed to clear EVM pot cache after chain switch", error)
+      console.error("Failed to clear EVM pot store cache:", error)
     }
   }
 

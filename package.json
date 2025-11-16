@@ -58,6 +58,7 @@
     "@web3-onboard/metamask": "^2.2.1",
     "@web3-onboard/react": "^2.11.0",
     "@web3-onboard/walletconnect": "^2.6.3",
+    "arkiv-sdk": "^0.1.19",
     "axios": "^1.12.2",
     "chalk": "^5.6.2",
     "class-variance-authority": "^0.7.1",
