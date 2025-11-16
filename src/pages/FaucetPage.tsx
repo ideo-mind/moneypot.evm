@@ -53,7 +53,7 @@ export function FaucetPage() {
     }
   };
 
-  const airdropInfo = evmFaucetService.getAirdropInfo();
+  const airdropInfo = evmFaucetService.getAirdropInfo(currentChain.id);
 
   return (
     <div className="max-w-2xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
@@ -207,33 +207,51 @@ export function FaucetPage() {
           </div>
 
           {/* External Faucets */}
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <h4 className="font-medium mb-3 text-blue-900 dark:text-blue-100">External Faucets</h4>
-            <div className="space-y-3">
-              <div>
-                <h5 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">ETH Faucet</h5>
-                <a 
-                  href={airdropInfo.faucets?.eth?.[0]} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline break-all"
-                >
-                  {airdropInfo.faucets?.eth?.[0]}
-                </a>
-              </div>
-              <div>
-                <h5 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">PYUSD Faucet</h5>
-                <a 
-                  href={airdropInfo.faucets?.pyusd?.[0]} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline break-all"
-                >
-                  {airdropInfo.faucets?.pyusd?.[0]}
-                </a>
+          {(airdropInfo.faucets?.native?.length > 0 || airdropInfo.faucets?.token?.length > 0) && (
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <h4 className="font-medium mb-3 text-blue-900 dark:text-blue-100">External Faucets</h4>
+              <div className="space-y-3">
+                {/* Native Token Faucet */}
+                {airdropInfo.faucets?.native?.length > 0 && (
+                  <div>
+                    <h5 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
+                      {currentChain.nativeCurrency.symbol} Faucet
+                    </h5>
+                    {airdropInfo.faucets.native.map((faucetUrl, index) => (
+                      <a
+                        key={index}
+                        href={faucetUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline break-all block"
+                      >
+                        {faucetUrl}
+                      </a>
+                    ))}
+                  </div>
+                )}
+                {/* Token Faucet (only if exists) */}
+                {airdropInfo.faucets?.token?.length > 0 && airdropInfo.faucets.tokenSymbol && (
+                  <div>
+                    <h5 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
+                      {airdropInfo.faucets.tokenSymbol} Faucet
+                    </h5>
+                    {airdropInfo.faucets.token.map((faucetUrl, index) => (
+                      <a
+                        key={index}
+                        href={faucetUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline break-all block"
+                      >
+                        {faucetUrl}
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

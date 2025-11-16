@@ -133,19 +133,31 @@ class EVMFaucetService {
 
   /**
    * Get airdrop information
+   * @param chainId - Optional chain ID, defaults to instance chainId
    * @returns object with airdrop details
    */
-  getAirdropInfo() {
-    const chain = getChain(this.chainId)
+  getAirdropInfo(chainId?: number) {
+    const targetChainId = chainId ?? this.chainId
+    const chain = getChain(targetChainId)
+    const nativeCurrency = chain.nativeCurrency
+    const tokenConfig = chain.custom?.moneypot?.token
+    
+    // Build tokens array dynamically
+    const tokens = [nativeCurrency.symbol]
+    if (tokenConfig?.symbol) {
+      tokens.push(tokenConfig.symbol)
+    }
+
     return {
       available: this.isAirdropAvailable(),
       amount: 200,
-      tokens: ["ETH", "PYUSD"],
+      tokens,
       network: chain.name,
-      chainId: this.chainId,
+      chainId: targetChainId,
       faucets: {
-        eth: chain.nativeCurrency.faucet || [],
-        pyusd: chain.custom?.moneypot?.token?.faucet || [],
+        native: nativeCurrency.faucet || [],
+        token: tokenConfig?.faucet || [],
+        tokenSymbol: tokenConfig?.symbol || null,
       },
     }
   }
