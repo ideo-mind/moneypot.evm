@@ -58,10 +58,13 @@ export const sepolia = defineChain({
         // "https://ethereum-sepolia-rpc.publicnode.com",
         // "https://rpc.sepolia.org",
         // "https://sepolia.gateway.tenderly.co",
-        "https://sepolia.infura.io/v3/" + INFURA_API_KEY,
+        // "https://11155111.rpc.thirdweb.com/1c7f56d370cac48d0c58616135e23ea5",
+        "https://eth-sepolia.api.onfinality.io/rpc?apikey=1bd40958-ada5-4b09-8cbc-542bc44f0360",
+        // "https://eth-sepolia.api.onfinality.io/rpc?apikey=287672ec-ec5d-4890-9b24-d34d699dd3da",
+
+        "https://eth-sepolia.g.alchemy.com/v2/3GiG3I2-Yr9IAplzdUPuI",
+        // "https://sepolia.infura.io/v3/" + INFURA_API_KEY,
         // "https://eth-sepolia.g.alchemy.com/v2/" + ALCHEMY_API_KEY,
-        // "https://11155111.rpc.hypersync.xyz", //FIXME: hypersync rpc is not workign
-        // "https://sepolia.rpc.hypersync.xyz",
         ,
       ],
     },
@@ -154,13 +157,53 @@ export const creditcoinTestnet = defineChain({
   testnet: true,
 })
 
+export const polkadotTestnet = defineChain({
+  id: 420420422,
+  name: "Polkadot Hub Testnet",
+  nativeCurrency: {
+    decimals: 18,
+    name: "Passet",
+    symbol: "PAS",
+    faucet: [
+      "https://faucet.polkadot.io/?parachain=1111",
+    ],
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://testnet-passet-hub-eth-rpc.polkadot.io"],
+      webSocket: ["wss://testnet-passet-hub-eth-rpc.polkadot.io",],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Polkadot EVM Explorer",
+      url: "https://blockscout-passet-hub.parity-testnet.parity.io",
+    },
+  },
+  custom: {
+    moneypot: {
+      address: "0xc1a3E49c21e540E7be2cdF4d378E4C7fD3619533",
+      abis: moneyPotABI,
+      token: {
+        address: "0x324ccC1E14c56e3ceFA891597Aaa65bAa9Bad7E6",
+        symbol: "UNREAL",
+        name: "Unreal Token",
+        decimals: 18,
+        abis: erc20Abi,
+        faucet: [],
+      },
+    },
+  },
+  testnet: true,
+});
+
 // Contract addresses are now accessed through chain configuration
 // Use getMoneyPotContractAddress(chainId) and getOnePContractAddress(chainId) from @config/networks
 
 // Simple hardcoded chains - Sepolia first as default
 
 // Single supported chain
-export const CHAINS = [sepolia, creditcoinTestnet]
+export const CHAINS = [sepolia, creditcoinTestnet, polkadotTestnet]
 
 // Default chain - Sepolia
 export const CHAIN_DEFAULT = sepolia
