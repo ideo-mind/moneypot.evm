@@ -8,7 +8,7 @@ import {
   parseTokenAmount,
   formatTokenAmount,
   creditcoinTestnet,
-  polkadotTestnet,
+  polkadotHubTestnet,
 } from "@/config/viem"
 import {
   contractFunctions,
@@ -109,7 +109,7 @@ class EVMContractService {
 
   // Check if gas limits should be skipped for this chain (Polkadot-based chains don't support gas limits)
   private shouldSkipGasLimit(): boolean {
-    return this.currentChainId === polkadotTestnet.id
+    return this.currentChainId === polkadotHubTestnet.id
   }
 
   // Get HUNTER_SHARE_PERCENT from contract (cached)

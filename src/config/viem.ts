@@ -157,7 +157,7 @@ export const creditcoinTestnet = defineChain({
   testnet: true,
 })
 
-export const polkadotTestnet = defineChain({
+export const polkadotHubTestnet = defineChain({
   id: 420420422,
   name: "Polkadot Hub Testnet",
   nativeCurrency: {
@@ -203,7 +203,7 @@ export const polkadotTestnet = defineChain({
 // Simple hardcoded chains - Sepolia first as default
 
 // Single supported chain
-export const CHAINS = [sepolia, creditcoinTestnet, polkadotTestnet]
+export const CHAINS = [sepolia, creditcoinTestnet, polkadotHubTestnet]
 
 // Default chain - Sepolia
 export const CHAIN_DEFAULT = sepolia
