@@ -60,9 +60,6 @@ export const sepolia = defineChain({
         // "https://sepolia.gateway.tenderly.co",
         // "https://11155111.rpc.thirdweb.com/1c7f56d370cac48d0c58616135e23ea5",
         "https://eth-sepolia.api.onfinality.io/rpc?apikey=1bd40958-ada5-4b09-8cbc-542bc44f0360",
-        // "https://eth-sepolia.api.onfinality.io/rpc?apikey=287672ec-ec5d-4890-9b24-d34d699dd3da",
-
-        "https://eth-sepolia.g.alchemy.com/v2/3GiG3I2-Yr9IAplzdUPuI",
         // "https://sepolia.infura.io/v3/" + INFURA_API_KEY,
         // "https://eth-sepolia.g.alchemy.com/v2/" + ALCHEMY_API_KEY,
         ,
