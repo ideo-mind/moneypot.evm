@@ -49,7 +49,7 @@ export const blockscoutConfig = {
       symbol: CHAIN_DEFAULT.nativeCurrency.symbol,
       decimals: CHAIN_DEFAULT.nativeCurrency.decimals,
     },
-    isTesnet: true,
+    isTesnet: CHAIN_DEFAULT.testnet,
   },
 
   // Multi chain support
