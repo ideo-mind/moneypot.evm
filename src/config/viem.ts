@@ -188,13 +188,53 @@ export const somniaTestnet = defineChain({
   testnet: true,
 })
 
+export const polkadotTestnet = defineChain({
+  id: 420420422,
+  name: "Polkadot Hub Testnet",
+  nativeCurrency: {
+    decimals: 18,
+    name: "Passet",
+    symbol: "PAS",
+    faucet: [
+      "https://faucet.polkadot.io/?parachain=1111",
+    ],
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://testnet-passet-hub-eth-rpc.polkadot.io"],
+      webSocket: ["wss://testnet-passet-hub-eth-rpc.polkadot.io",],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Polkadot EVM Explorer",
+      url: "https://blockscout-passet-hub.parity-testnet.parity.io",
+    },
+  },
+  custom: {
+    moneypot: {
+      address: "0xc1a3E49c21e540E7be2cdF4d378E4C7fD3619533",
+      abis: moneyPotABI,
+      token: {
+        address: "0x324ccC1E14c56e3ceFA891597Aaa65bAa9Bad7E6",
+        symbol: "UNREAL",
+        name: "Unreal Token",
+        decimals: 18,
+        abis: erc20Abi,
+        faucet: [],
+      },
+    },
+  },
+  testnet: true,
+});
+
 // Contract addresses are now accessed through chain configuration
 // Use getMoneyPotContractAddress(chainId) and getOnePContractAddress(chainId) from @config/networks
 
 // Simple hardcoded chains - Sepolia first as default
 
 // Single supported chain
-export const CHAINS = [sepolia, creditcoinTestnet, somniaTestnet]
+export const CHAINS = [sepolia, creditcoinTestnet, somniaTestnet, polkadotTestnet]
 
 // Default chain - Sepolia
 export const CHAIN_DEFAULT = sepolia
