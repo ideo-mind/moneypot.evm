@@ -16,6 +16,7 @@ export interface AirdropResult {
 export interface AirdropParams {
   amount?: number
   message?: string
+  chainId?: number
 }
 
 class EVMFaucetService {
@@ -40,7 +41,12 @@ class EVMFaucetService {
       const {
         amount = 200, // Default amount as per documentation
         message = "Claim airdrop",
+        chainId,
       } = params
+
+      // Use provided chainId or fall back to instance chainId
+      const targetChainId = chainId ?? this.chainId
+      const targetChain = getChain(targetChainId)
 
       // Generate random wallet for airdrop request
       const randomAccount = privateKeyToAccount(
@@ -52,7 +58,7 @@ class EVMFaucetService {
       // Create wallet client
       const walletClient = createWalletClient({
         account: randomAccount,
-        chain: sepolia,
+        chain: targetChain,
         transport: http(),
       })
 
@@ -63,7 +69,7 @@ class EVMFaucetService {
       const payload = {
         amount,
         message,
-        chain_id: this.chainId,
+        chain_id: targetChainId,
         iat: currentTime,
         iss: address,
         exp: currentTime + 3600, // 1 hour

@@ -33,7 +33,8 @@ export function FaucetPage() {
     try {
       const result = await evmFaucetService.requestAirdrop({
         amount: 200,
-        message: "Claim airdrop"
+        message: "Claim airdrop",
+        chainId: currentChain.id
       });
 
       setLastResult(result);
