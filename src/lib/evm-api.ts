@@ -7,6 +7,8 @@ import {
   getPublicClient,
   parseTokenAmount,
   formatTokenAmount,
+  creditcoinTestnet,
+  polkadotTestnet,
 } from "@/config/viem"
 import {
   contractFunctions,
@@ -105,6 +107,11 @@ class EVMContractService {
     return this.walletClient
   }
 
+  // Check if gas limits should be skipped for this chain (Polkadot-based chains don't support gas limits)
+  private shouldSkipGasLimit(): boolean {
+    return this.currentChainId === polkadotTestnet.id
+  }
+
   // Get HUNTER_SHARE_PERCENT from contract (cached)
   async getHunterSharePercent(): Promise<bigint> {
     if (this.hunterSharePercentCache !== null) {
@@ -170,14 +177,14 @@ class EVMContractService {
           "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
         )
 
-        // Don't pass gas for Creditcoin Testnet (102031) - RPC will fail
+        // Don't pass gas for Polkadot-based chains (Creditcoin Testnet, Polkadot Testnet) - RPC will fail
         const writeParams: any = {
           address: chainConfig.tokenAddress as Address,
           abi: erc20Abi,
           functionName: "approve",
           args: [chainConfig.contractAddress, maxApproval],
         }
-        if (this.currentChainId !== 102031) {
+        if (!this.shouldSkipGasLimit()) {
           writeParams.gas = 5000000n // Higher gas limit for approval transactions
         }
 
@@ -212,7 +219,7 @@ class EVMContractService {
       await this.ensureTokenApproval(params.amount)
 
       // Now create the pot
-      // Don't pass gas for Creditcoin Testnet (102031) - RPC will fail
+      // Don't pass gas for Polkadot-based chains (Creditcoin Testnet, Polkadot Testnet) - RPC will fail
       const writeParams: any = {
         address: chainConfig.contractAddress as Address,
         abi: contractFunctions.createPot.abi,
@@ -224,7 +231,7 @@ class EVMContractService {
           params.oneFaAddress,
         ],
       }
-      if (this.currentChainId !== 102031) {
+      if (!this.shouldSkipGasLimit()) {
         writeParams.gas = 5000000n // Higher gas limit for pot creation
       }
 
@@ -293,14 +300,14 @@ class EVMContractService {
       console.log("Checking approval for entry fee...")
       await this.ensureTokenApproval(potData.fee)
 
-      // Don't pass gas for Creditcoin Testnet (102031) - RPC will fail
+      // Don't pass gas for Polkadot-based chains (Creditcoin Testnet, Polkadot Testnet) - RPC will fail
       const writeParams: any = {
         address: chainConfig.contractAddress as Address,
         abi: contractFunctions.attemptPot.abi,
         functionName: contractFunctions.attemptPot.functionName,
         args: [params.potId],
       }
-      if (this.currentChainId !== 102031) {
+      if (!this.shouldSkipGasLimit()) {
         writeParams.gas = 5000000n // Higher gas limit for pot attempt
       }
 
