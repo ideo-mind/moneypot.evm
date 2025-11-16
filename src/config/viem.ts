@@ -22,20 +22,20 @@ export { type Chain } from "viem"
 
 // Fix: Extend Chain type for 'custom' field for moneypot and token typing
 interface MoneyPotTokenConfig {
-  address: string
-  symbol: string
-  name: string
-  decimals: number
-  abis: typeof erc20Abi
-  faucet?: string[]
+  address: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  abis: typeof erc20Abi;
+  faucet?: string[];
 }
 interface MoneyPotCustomConfig {
   moneypot: {
-    address: string
-    abis: typeof moneyPotABI
-    token: MoneyPotTokenConfig
-  }
-  onep?: object
+    address: string;
+    abis: typeof moneyPotABI;
+    token: MoneyPotTokenConfig;
+  };
+  onep?: object;
 }
 // Patch getChain() return type to known custom shape where needed:
 
@@ -107,40 +107,44 @@ export const sepolia = defineChain({
 
 export const creditcoinTestnet = defineChain({
   id: 102031,
-  name: "Creditcoin Testnet",
+  name: 'Creditcoin Testnet',
   nativeCurrency: {
     decimals: 18,
-    name: "Creditcoin",
-    symbol: "CTC",
-    faucet: ["https://console.ideomind.org/"],
+    name: 'Creditcoin',
+    symbol: 'CTC',
+    faucet: [
+      'https://console.unreal.art/'
+    ],
   },
   rpcUrls: {
     default: {
-      http: ["https://rpc.cc3-testnet.creditcoin.network"],
-      webSocket: ["wss://rpc.cc3-testnet.creditcoin.network"],
+      http: ['https://rpc.cc3-testnet.creditcoin.network'],
+      webSocket: ['wss://rpc.cc3-testnet.creditcoin.network'],
     },
     public: {
-      http: ["https://rpc.cc3-testnet.creditcoin.network"],
-      webSocket: ["wss://rpc.cc3-testnet.creditcoin.network"],
+      http: ['https://rpc.cc3-testnet.creditcoin.network'],
+      webSocket: ['wss://rpc.cc3-testnet.creditcoin.network'],
     },
   },
   blockExplorers: {
     default: {
-      name: "Creditcoin Explorer",
-      url: "https://creditcoin-testnet.blockscout.com",
+      name: 'Creditcoin Explorer',
+      url: 'https://creditcoin-testnet.blockscout.com',
     },
   },
   custom: {
     moneypot: {
-      address: "0x171AB010407D5A2640c91fdCb7C9f5f4507a9ee5",
+      address: '0x171AB010407D5A2640c91fdCb7C9f5f4507a9ee5',
       abis: moneyPotABI,
       token: {
-        address: "0x15EDeBfe6De62Fe4827C00d82e0230566600aF73",
-        symbol: "UNREAL",
-        name: "Unreal Token",
+        address: '0x15EDeBfe6De62Fe4827C00d82e0230566600aF73',
+        symbol: 'UNREAL',
+        name: 'Unreal Token',
         decimals: 18,
         abis: erc20Abi,
-        faucet: ["https://console.ideomind.org/"],
+        faucet: [
+          'https://console.unreal.art/'
+        ],
       },
     },
     onep: {
@@ -150,91 +154,13 @@ export const creditcoinTestnet = defineChain({
   testnet: true,
 })
 
-export const somniaTestnet = defineChain({
-  id: 50312,
-  name: "Somnia Shanon Testnet",
-  nativeCurrency: {
-    decimals: 18,
-    name: "Somnia Testnet Token",
-    symbol: "STT",
-  },
-  rpcUrls: {
-    default: {
-      http: ["https://rpc.ankr.com/somnia_testnet"],
-    },
-    public: {
-      http: ["https://dream-rpc.somnia.network"],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "Somnia Shanon Explorer",
-      url: "https://shannon-explorer.somnia.network/",
-    },
-  },
-  custom: {
-    moneypot: {
-      address: "0xCFDc84668aAc069f5e885e5E4bded97E22a2fDe1",
-      abis: moneyPotABI,
-      token: {
-        address: "0xd1fB2a15545032a8170370d7eC47C0FC69A00eed",
-        symbol: "UNREAL",
-        name: "Unreal Token",
-        decimals: 18,
-        abis: erc20Abi,
-      },
-    },
-  },
-  testnet: true,
-})
-
-export const polkadotTestnet = defineChain({
-  id: 420420422,
-  name: "Polkadot Hub Testnet",
-  nativeCurrency: {
-    decimals: 18,
-    name: "Passet",
-    symbol: "PAS",
-    faucet: [
-      "https://faucet.polkadot.io/?parachain=1111",
-    ],
-  },
-  rpcUrls: {
-    default: {
-      http: ["https://testnet-passet-hub-eth-rpc.polkadot.io"],
-      webSocket: ["wss://testnet-passet-hub-eth-rpc.polkadot.io",],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "Polkadot EVM Explorer",
-      url: "https://blockscout-passet-hub.parity-testnet.parity.io",
-    },
-  },
-  custom: {
-    moneypot: {
-      address: "0xc1a3E49c21e540E7be2cdF4d378E4C7fD3619533",
-      abis: moneyPotABI,
-      token: {
-        address: "0x324ccC1E14c56e3ceFA891597Aaa65bAa9Bad7E6",
-        symbol: "UNREAL",
-        name: "Unreal Token",
-        decimals: 18,
-        abis: erc20Abi,
-        faucet: [],
-      },
-    },
-  },
-  testnet: true,
-});
-
 // Contract addresses are now accessed through chain configuration
 // Use getMoneyPotContractAddress(chainId) and getOnePContractAddress(chainId) from @config/networks
 
 // Simple hardcoded chains - Sepolia first as default
 
 // Single supported chain
-export const CHAINS = [sepolia, creditcoinTestnet, somniaTestnet, polkadotTestnet]
+export const CHAINS = [sepolia, creditcoinTestnet]
 
 // Default chain - Sepolia
 export const CHAIN_DEFAULT = sepolia
@@ -402,10 +328,10 @@ export const parseETH = (eth: number) => {
  * @returns bigint value with proper decimals
  */
 export const parseTokenAmount = (amount: number, chainId: number): bigint => {
-  const chain = getChain(chainId) as Chain & { custom: MoneyPotCustomConfig }
-  const decimals = chain.custom.moneypot.token.decimals
-  return parseUnits(amount.toString(), decimals)
-}
+  const chain = getChain(chainId) as Chain & { custom: MoneyPotCustomConfig };
+  const decimals = chain.custom.moneypot.token.decimals;
+  return parseUnits(amount.toString(), decimals);
+};
 
 /**
  * Format token amount from bigint to number using token decimals from chain config
@@ -414,7 +340,7 @@ export const parseTokenAmount = (amount: number, chainId: number): bigint => {
  * @returns number value with proper decimals
  */
 export const formatTokenAmount = (amount: bigint, chainId: number): number => {
-  const chain = getChain(chainId) as Chain & { custom: MoneyPotCustomConfig }
-  const decimals = chain.custom.moneypot.token.decimals
-  return Number(formatUnits(amount, decimals))
-}
+  const chain = getChain(chainId) as Chain & { custom: MoneyPotCustomConfig };
+  const decimals = chain.custom.moneypot.token.decimals;
+  return Number(formatUnits(amount, decimals));
+};

@@ -170,13 +170,18 @@ class EVMContractService {
           "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
         )
 
-        const approveHash = await walletClient.writeContract({
+        // Don't pass gas for Creditcoin Testnet (102031) - RPC will fail
+        const writeParams: any = {
           address: chainConfig.tokenAddress as Address,
           abi: erc20Abi,
           functionName: "approve",
           args: [chainConfig.contractAddress, maxApproval],
-          gas: 5000000n, // Higher gas limit for approval transactions
-        })
+        }
+        if (this.currentChainId !== 102031) {
+          writeParams.gas = 5000000n // Higher gas limit for approval transactions
+        }
+
+        const approveHash = await walletClient.writeContract(writeParams)
 
         // Wait for approval confirmation
         await publicClient.waitForTransactionReceipt({ hash: approveHash })
@@ -207,7 +212,8 @@ class EVMContractService {
       await this.ensureTokenApproval(params.amount)
 
       // Now create the pot
-      const hash = await walletClient.writeContract({
+      // Don't pass gas for Creditcoin Testnet (102031) - RPC will fail
+      const writeParams: any = {
         address: chainConfig.contractAddress as Address,
         abi: contractFunctions.createPot.abi,
         functionName: contractFunctions.createPot.functionName,
@@ -217,8 +223,12 @@ class EVMContractService {
           params.fee,
           params.oneFaAddress,
         ],
-        gas: 5000000n, // Higher gas limit for pot creation
-      })
+      }
+      if (this.currentChainId !== 102031) {
+        writeParams.gas = 5000000n // Higher gas limit for pot creation
+      }
+
+      const hash = await walletClient.writeContract(writeParams)
 
       // Wait for transaction confirmation
       const receipt = await publicClient.waitForTransactionReceipt({ hash })
@@ -283,13 +293,18 @@ class EVMContractService {
       console.log("Checking approval for entry fee...")
       await this.ensureTokenApproval(potData.fee)
 
-      const hash = await walletClient.writeContract({
+      // Don't pass gas for Creditcoin Testnet (102031) - RPC will fail
+      const writeParams: any = {
         address: chainConfig.contractAddress as Address,
         abi: contractFunctions.attemptPot.abi,
         functionName: contractFunctions.attemptPot.functionName,
         args: [params.potId],
-        gas: 5000000n, // Higher gas limit for pot attempt
-      })
+      }
+      if (this.currentChainId !== 102031) {
+        writeParams.gas = 5000000n // Higher gas limit for pot attempt
+      }
+
+      const hash = await walletClient.writeContract(writeParams)
 
       // Wait for transaction confirmation
       const receipt = await publicClient.waitForTransactionReceipt({ hash })

@@ -86,17 +86,17 @@ export const WalletProvider = ({ children }: PropsWithChildren) => {
 
     // Attempt auto-reconnect first
     autoReconnectIfNeeded().finally(() => {
-      // Initial check
-      handleEVMWalletChange()
+    // Initial check
+    handleEVMWalletChange()
 
-      // Subscribe to wallet changes
+    // Subscribe to wallet changes
       const unsubscribe = onboard.state.select('wallets').subscribe(() => {
-        handleEVMWalletChange()
-      })
+      handleEVMWalletChange()
+    })
 
-      return () => {
-        unsubscribe.unsubscribe()
-      }
+    return () => {
+      unsubscribe.unsubscribe()
+    }
     })
   }, [])
 

@@ -94,13 +94,13 @@ class NetworkAdapter {
       }
     } catch {}
     evmContractService.setChainId(chainId)
-    evmVerifierService.setChainId(chainId) // Update chain ID in verifier service
     // After a chain switch, clear stores and caches to avoid cross-chain collisions
     try {
-      useEVMPotStore.getState().clearCache()
-    } catch (error) {
-      console.warn("Failed to clear EVM pot cache after chain switch", error)
-    }
+      const potStore = require('@/store/evm-pot-store');
+      if (potStore && potStore.useEVMPotStore) {
+        potStore.useEVMPotStore.getState().clearCache();
+      }
+    } catch (err) {}
   }
 
   get currentChain(): number {
