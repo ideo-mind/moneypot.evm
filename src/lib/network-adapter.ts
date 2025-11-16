@@ -96,11 +96,10 @@ class NetworkAdapter {
     evmContractService.setChainId(chainId)
     // After a chain switch, clear stores and caches to avoid cross-chain collisions
     try {
-      const potStore = require('@/store/evm-pot-store');
-      if (potStore && potStore.useEVMPotStore) {
-        potStore.useEVMPotStore.getState().clearCache();
-      }
-    } catch (err) {}
+      useEVMPotStore.getState().clearCache();
+    } catch (error) {
+      console.error("Failed to clear EVM pot store cache:", error)
+    }
   }
 
   get currentChain(): number {
