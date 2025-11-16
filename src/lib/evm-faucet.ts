@@ -63,6 +63,7 @@ class EVMFaucetService {
       const payload = {
         amount,
         message,
+        chain_id: this.chainId,
         iat: currentTime,
         iss: address,
         exp: currentTime + 3600, // 1 hour
