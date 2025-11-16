@@ -44,9 +44,16 @@ class EVMFaucetService {
         chainId,
       } = params
 
+    try {
       // Use provided chainId or fall back to instance chainId
       const targetChainId = chainId ?? this.chainId
       const targetChain = getChain(targetChainId)
+    } catch (error) {
+      return {
+        success: false,
+        error: `Unsupported chain ID: ${chainId ?? this.chainId}`
+      }
+    }
 
       // Generate random wallet for airdrop request
       const randomAccount = privateKeyToAccount(
